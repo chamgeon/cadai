@@ -1,0 +1,12 @@
+name: cadai
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - cadquery=2.8
+  - pip
+  - pip:
+      - trimesh
+      - pyrender
+      - qdrant-client
+      - streamlit

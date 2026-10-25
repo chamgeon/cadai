@@ -1,0 +1,15 @@
+# Data and generated artifacts (too big for git)
+data/**
+!data/*/
+!data/*/.gitkeep
+db/*.sqlite
+db/*.db
+qdrant_storage/
+
+# Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# macOS
+.DS_Store
