@@ -1,7 +1,7 @@
 # cadai
 
 Mini CAD-to-AI pipeline: STEP files → metadata → meshes → renders → embeddings → similar-part search + RAG Q&A.
-See `docs/cad-ai-interview-prep-plan.md` for the 10-day plan and `logs/daily-log.md` for progress.
+See `docs/cad-ai-interview-prep-plan.md` for the step-by-step plan and `logs/daily-log.md` for progress.
 
 ## Setup
     conda env create -f environment.yml

@@ -11,3 +11,4 @@ MESH = DATA / "mesh"          # glTF (viewing) and STL (ML)
 RENDERS = DATA / "renders"    # renders/{part_id}/view_0..5.png
 
 DB_PATH = ROOT / "db" / "parts.sqlite"
+QDRANT_PATH = ROOT / "qdrant_storage"  # Qdrant local mode (no server); gitignored

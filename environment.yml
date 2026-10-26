@@ -4,9 +4,13 @@ channels:
 dependencies:
   - python=3.11
   - cadquery=2.8
+  # torch from conda-forge, not pip: the pip wheel bundles its own libomp, which
+  # clashes with the env's (numpy/OpenBLAS) and aborts with OMP Error #15
+  - pytorch=2.14.1
   - pip
   - pip:
       - trimesh
       - pyrender
       - qdrant-client
       - streamlit
+      - transformers==5.20.2

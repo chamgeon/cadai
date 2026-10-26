@@ -1,7 +1,7 @@
-# 10-Day Hands-On Interview Prep Plan
+# 10-Step Hands-On Interview Prep Plan
 ## AI for Car R&D: CAD Data Pipeline & Similar-Part Search
 
-**Goal:** In 10 days, build a small, working version of a CAD-to-AI pipeline on your own laptop, so that in the interview you can say: *"I built this, here's what broke, and here's what I'd change at Hyundai's scale."*
+**Goal:** Build a small, working version of a CAD-to-AI pipeline on your own laptop, so that in the interview you can say: *"I built this, here's what broke, and here's what I'd change at Hyundai's scale."*
 
 **Principle:** Cut scope, not steps. A thin system that works end to end beats a perfect half-system.
 
@@ -71,9 +71,9 @@ You will build a mini **"similar-part search + Q&A"** system:
 
 ---
 
-## 3. Day-by-Day Plan
+## 3. Step-by-Step Plan
 
-### Day 1: Read CAD
+### Step 1: Read CAD
 **Do**
 - Set up the environment (conda, CadQuery or pythonocc).
 - Download one dataset chunk.
@@ -84,14 +84,14 @@ You will build a mini **"similar-part search + Q&A"** system:
 
 **Learn:** STEP / B-rep basics, why some files fail, what "valid solid" means.
 
-### Day 2: Model One Part Yourself + Convert to Meshes
+### Step 2: Model One Part Yourself + Convert to Meshes
 **Do (first 2 to 3 hours): model a part**
 - In a free CAD tool (FreeCAD, or Onshape's free plan), model a simple bracket: sketch, extrude, add holes and fillets, set one or two dimensions as parameters.
 - Change a parameter and watch the model update: this is "design intent."
 - Export it to STEP, then reopen the STEP: notice the feature tree is gone and only the geometry remains.
-- Run your Day 1 script on it, and include it in every later step (it becomes "your" part in the demo).
+- Run your step 1 script on it, and include it in every later step (it becomes "your" part in the demo).
 
-**Do (rest of the day): convert to meshes**
+**Do (then): convert to meshes**
 - Tessellate each part into a mesh.
 - Export **coarse glTF** (viewing) and **fine STL** (ML).
 - Try 2 to 3 mesh tolerances; compare triangle counts and file sizes.
@@ -101,7 +101,7 @@ You will build a mini **"similar-part search + Q&A"** system:
 
 **Learn:** feature tree vs. exact geometry vs. mesh (three levels of information loss); tessellation trade-offs; why tolerance should scale with part size.
 
-### Day 3: Render Images
+### Step 3: Render Images
 **Do**
 - Render 6 fixed views per part (front, back, left, right, top, isometric), headless.
 - Normalize: center the part, scale to fit, same lighting, same background.
@@ -111,7 +111,7 @@ You will build a mini **"similar-part search + Q&A"** system:
 
 **Learn:** why consistency matters for similarity search.
 
-### Day 4: Similar-Part Search (the demo moment)
+### Step 4: Similar-Part Search (the demo moment)
 **Do**
 - Embed each view with DINOv2 or CLIP, average the views into one vector per part.
 - Store vectors in Qdrant with `part_id` as payload.
@@ -122,7 +122,7 @@ You will build a mini **"similar-part search + Q&A"** system:
 
 **Learn:** embeddings, cosine similarity, where image-based similarity fails (e.g., same shape, different size).
 
-### Day 5: Make It a Pipeline
+### Step 5: Make It a Pipeline
 **Do**
 - Folder watcher: new file in `data/raw` creates a job.
 - Queue (Redis + RQ or simple Python queue) and a worker that runs: load, extract, mesh, render, embed, store.
@@ -135,7 +135,7 @@ You will build a mini **"similar-part search + Q&A"** system:
 
 **Learn:** idempotency, retries, dead-letter queues, lineage.
 
-### Day 6: Text Side (RAG Q&A)
+### Step 6: Text Side (RAG Q&A)
 **Do**
 - Generate fake PLM records per part: name, material, program, supplier, status, 1 to 3 short test notes.
 - Chunk and embed the text; store in the vector DB.
@@ -146,7 +146,7 @@ You will build a mini **"similar-part search + Q&A"** system:
 
 **Learn:** RAG, citations, permission filtering before retrieval (not after).
 
-### Day 7: UI
+### Step 7: UI
 **Do**
 - Streamlit app with: search bar, part detail page (renders + metadata), "similar parts" panel, chat box.
 - Optional: embed a 3D glTF viewer.
@@ -155,7 +155,7 @@ You will build a mini **"similar-part search + Q&A"** system:
 
 **Learn:** what engineers would actually click; where latency hurts.
 
-### Day 8: Measure
+### Step 8: Measure
 **Do**
 - Conversion success rate (% loaded, % meshed, % passed validation)
 - Average time per part, per stage
@@ -167,7 +167,7 @@ You will build a mini **"similar-part search + Q&A"** system:
 
 **Learn:** these numbers and failure stories are your strongest interview material.
 
-### Day 9: Build the Story
+### Step 9: Build the Story
 **Do**
 - Draw a one-page architecture diagram (your mini version and the scaled-up version).
 - Write "what changes at Hyundai scale":
@@ -181,7 +181,7 @@ You will build a mini **"similar-part search + Q&A"** system:
 
 **Done when:** you can explain the system out loud without notes.
 
-### Day 10: Mock Interview + Buffer
+### Step 10: Mock Interview + Buffer
 **Do**
 - Practice out loud (record yourself, or ask a friend or an AI to interview you).
 - Rehearse the demo; prepare screenshots in case live demo fails.
@@ -193,7 +193,7 @@ You will build a mini **"similar-part search + Q&A"** system:
 
 | Situation | Cut this | Keep this |
 |---|---|---|
-| Install problems on Day 1 | pythonocc; use CadQuery or pre-meshed data | Loading + properties |
+| Install problems in step 1 | pythonocc; use CadQuery or pre-meshed data | Loading + properties |
 | Rendering too slow | 6 views to 3; fewer parts | Consistent renders |
 | Queue too complex | Redis; use a simple loop with status table | Hash skip, validation, failed folder |
 | RAG behind schedule | Hybrid search; use vector only | Citations, access filter |
@@ -232,11 +232,11 @@ You will build a mini **"similar-part search + Q&A"** system:
 
 ## 6. Daily Log Template
 
-Copy this each day. It becomes your interview answers.
+Copy this for each working session. It becomes your interview answers.
 
 ```
-Date / Day #:
-Goal today:
+Date / Step #:
+Goal:
 What I built:
 What broke (and why):
 How I fixed it / workaround:
@@ -247,7 +247,7 @@ Question I still have:
 
 ---
 
-## 7. Final Checklist (Day 10)
+## 7. Final Checklist (Step 10)
 
 - [ ] Working demo: search, similar parts, Q&A with citations
 - [ ] Your own modeled part included in the demo (native file + STEP)
