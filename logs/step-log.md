@@ -254,3 +254,41 @@ Medium is already sub-pixel at the model's 224 px. Fine used 71% of storage and 
 - Parts added by the pipeline get no PLM records or chunks until `src.qa.plm` + `src.qa.textindex build` rerun (~5 min); the index has no incremental update.
 - 39% of latest revisions are "In Work" (open fails force it); fine for the demo, high for a real program.
 - BR-63592's "hole count reduced" change right before its crack is a generator coincidence, not a planted story.
+
+## Step 7 — UI (2026-10-27) · TEMPORARY, step not finished
+
+**Goal:** a Streamlit app where a 2-minute demo flows from search to similar parts to Q&A.
+
+**What was built**
+- `src/ui/`: `app.py` (sidebar: user = programs, index status), pages `views/search.py`, `part.py`, `ask.py`, `upload.py`; `data.py` (reads, permission first), `widgets.py`, `resources.py` (models loaded once), `cadworker.py`.
+- Search: hybrid text search grouped by part, filters, EN/KO. Part: renders, PLM record, tests / ECOs / revisions / geometry, similar parts + size filter, 3D view. Ask: the agent with live tool progress and cited parts as tiles. Upload: STEP → renders → similar existing parts → "Ask about these parts".
+- Step 6 code touched: `agent.ask_async(on_event=)` progress hook; `Tools.similar_parts` split into `similar_to(views, size)` (output identical, checked); BGE-M3 fp16 for queries.
+
+**Decisions**
+- **Memory first (8 GB M1):** BGE-M3 fp16 for queries (−1.6 GB, same top-10 on 8 queries); one process holds the models; 3D view off by default (WebGL 100–300 MB).
+- **Extract / mesh / render run in a child process:** VTK's Cocoa window aborts the process when created off the main thread, and Streamlit runs scripts off it. Its renders are pixel-identical to the pipeline's.
+- **An upload is a question, not an ingest:** nothing is written to SQLite or Qdrant; similarity ≥ 0.97 is flagged as "existing part, reuse it?".
+- **All model calls on the agent's single tool thread;** models warmed on startup (incl. a 6-image DINOv2 batch).
+- **Demo hardening:** server bound to localhost (the app spends the API key), HF offline, model-viewer + lighting served from `src/ui/static` (no network).
+
+**What broke → fix**
+- VTK in Streamlit's thread: NSException abort → CAD child process.
+- Fused fp16 attention fails on M1 → eager attention for the fp16 path.
+- New browser session took 4.9 s: Streamlit's file watcher scans 6,226 modules per session → demo with `--server.fileWatcherType none` (0.6 s).
+- Links within the Part page left the old part in the address bar, and the part box (no key) returned stale text → the next click reopened the empty page; the 3D toggle drew "off" while the viewer spun → URL is the source of truth, box and toggle synced explicitly.
+- 3D view blurry: the pipeline's glbs have no normals (`mesh.export` lacks `include_normals=True`) and no material, and model-viewer's built-in lighting is near uniform → normals + material added at view time; HDR studio light (`src/ui/make_studio_hdr.py`).
+- Ask: the previous run's live answer lingered, faded, under the next question → `st.rerun()` after each answer; examples hidden while answering.
+
+**Numbers measured**
+- Cold start ~20 s (models 12–14 s); Search 0.4–0.5 s; Part < 0.5 s; Upload ~1 s (extract 0.15, mesh 0.03, render 0.17, embed 0.6 s); Ask 5–18 s, of which tools ~0.2 s: the latency is the LLM.
+- Memory: Streamlit 3.15 GB at start, 4.2 GB after use; CAD worker 0.29 GB; Qdrant 0.44 GB.
+
+**Open issues**
+1. **No multi-turn chat:** each question is answered on its own; the agent keeps no conversation memory within the session.
+2. **Upload is not part of the chat:** a STEP can only be dropped on the Upload page, and its chat handoff is one canned question. Expected: attach a file in the chat box and ask about it.
+3. **Page title "cadai · part search"** (`app.py`) → rename.
+4. Pipeline glbs written without normals (step 2 bug); UI works around it. Fix: `include_normals=True` + rewrite the glb files only, no `MESH_VER` bump.
+5. Streamlit process grows 3.15 → 4.2 GB with use (likely the MPS cache); not yet checked whether it plateaus.
+6. **No Korean UI:** labels, captions and examples are English only (questions and answers already work in Korean).
+7. **Design too generic:** default Streamlit look; needs its own visual identity.
+8. Not done: full 2-minute demo run, latency table for step 8, README demo command, answer streaming.

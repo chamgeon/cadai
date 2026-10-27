@@ -119,16 +119,26 @@ class Tools:
         card = self._card(part_no)
         if card is None:
             return {"error": f"no part {part_no} found"}
+        me = self.qc.retrieve(index.COLLECTION, [index.point_id(card["part_id"])], with_vectors=["views"])[0]
+        size = self.conn.execute("SELECT dim_1 FROM parts WHERE part_id = ?", (card["part_id"],)).fetchone()[0]
+        found = self.similar_to(me.vector["views"], size, limit, max_size_ratio, exclude_file=me.payload["file_id"])
+        return {"query": {"part_no": part_no, "size_mm": round(size, 1)}, **found}
+
+    def similar_to(self, views, size, limit=5, max_size_ratio=None, exclude_file=None):
+        """Parts that look like a shape given by its 6 view vectors, among those the user may see.
+
+        For a shape with no part number yet (an uploaded file, not in the index); size is its longest bbox
+        side, for size_ratio. Not offered to the LLM: it can't produce view vectors.
+        """
         visible = {r["part_id"]: r for r in self.conn.execute(
             f"SELECT i.part_id, i.part_no, i.name, i.material, i.status, p.dim_1, p.dim_2, p.dim_3"
             f" FROM plm_items i JOIN parts p ON p.part_id = i.part_id WHERE i.{self.in_programs}", self.programs)}
-        me = self.qc.retrieve(index.COLLECTION, [index.point_id(card["part_id"])], with_vectors=["views"])[0]
         flt = models.Filter(
             must=[models.FieldCondition(key="part_id", match=models.MatchAny(any=list(visible)))],
-            must_not=[models.FieldCondition(key="file_id", match=models.MatchValue(value=me.payload["file_id"]))])
-        hits = self.qc.query_points(index.COLLECTION, query=me.vector["views"], using="views", query_filter=flt,
+            must_not=[models.FieldCondition(key="file_id", match=models.MatchValue(value=exclude_file))]
+            if exclude_file else None)
+        hits = self.qc.query_points(index.COLLECTION, query=views, using="views", query_filter=flt,
                                     limit=min(limit, 20) * (4 if max_size_ratio else 1)).points
-        size = visible[card["part_id"]]["dim_1"]
         out = []
         for h in hits:
             v = visible[h.payload["part_id"]]
@@ -143,4 +153,4 @@ class Tools:
                         "size_ratio": round(ratio, 2), "test_results": dict(tests)})
             if len(out) == limit:
                 break
-        return {"query": {"part_no": part_no, "size_mm": round(size, 1)}, "similar": out}
+        return {"similar": out}

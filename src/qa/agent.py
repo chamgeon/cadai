@@ -118,11 +118,16 @@ TOOLS = [
 _tool_thread = ThreadPoolExecutor(max_workers=1)
 
 
-async def ask_async(question, user="normal", client=None, verbose=False):
+async def ask_async(question, user="normal", client=None, verbose=False, on_event=None):
     """-> {"answer", "trace", "calls", "rounds", "usage", "stop_reason", "seconds", "repaired", "unverified_ids"}.
 
     trace: one entry per tool call; calls: one per LLM request (seconds, output tokens).
+    on_event(kind, info): progress for a UI, called on the caller's event loop as it happens:
+        "request" {round, kind}               an LLM request starts (kind: plan | id_repair)
+        "tool"    {round, tool, input}        a tool call starts
+        "result"  {...the trace entry}        it finished
     """
+    emit = on_event or (lambda kind, info: None)
     client = client or anthropic.AsyncAnthropic()
     loop = asyncio.get_running_loop()
     tools = await loop.run_in_executor(_tool_thread, Tools, user)
@@ -132,6 +137,7 @@ async def ask_async(question, user="normal", client=None, verbose=False):
     start = time.perf_counter()
 
     async def request(tools_off, kind):
+        emit("request", {"round": len(calls) + 1, "kind": kind})
         t = time.perf_counter()
         response = await client.beta.messages.create(
             model=MODEL, max_tokens=MAX_TOKENS, system=SYSTEM, tools=TOOLS, messages=messages,
@@ -164,11 +170,13 @@ async def ask_async(question, user="normal", client=None, verbose=False):
             break
         results = []
         for call in uses:
+            emit("tool", {"round": round_ + 1, "tool": call.name, "input": call.input})
             t = time.perf_counter()
             text, is_error = await loop.run_in_executor(_tool_thread, tools.run, call.name, call.input)
             seen.update(ID.findall(text))
             trace.append({"round": round_ + 1, "tool": call.name, "input": call.input, "is_error": is_error,
                           "result_chars": len(text), "seconds": round(time.perf_counter() - t, 2)})
+            emit("result", trace[-1])
             if verbose:
                 print(f"  [{round_ + 1}] {call.name}({json.dumps(call.input, ensure_ascii=False)})"
                       f"{'  ERROR ' + text if is_error else ''}")

@@ -1,0 +1,11 @@
+[server]
+address = "localhost"   # the app spends the Anthropic key: not for the LAN
+headless = true
+runOnSave = true
+enableStaticServing = true   # src/ui/static: the 3D viewer script, so the demo needs no network
+
+[client]
+toolbarMode = "minimal"   # demo: no deploy button or developer menu
+
+[browser]
+gatherUsageStats = false
