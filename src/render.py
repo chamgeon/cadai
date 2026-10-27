@@ -30,7 +30,7 @@ from vtk.util import numpy_support
 from src.canonical import canonicalize
 from src.config import DATA, DB_PATH, FAILED, MESH, RAW, RENDERS
 from src.extract import load_solids, migrate
-from src.mesh import STUDY_LEVELS, export, tessellate
+from src.mesh import MESH_VER, STUDY_LEVELS, export, tessellate
 
 RENDER_VER = 2  # bump when views, lighting, size or pose change
 SIZE = 512
@@ -58,6 +58,7 @@ CREATE TABLE IF NOT EXISTS renders (
     render_seconds REAL,
     png_bytes      INTEGER,          -- all views together
     file_sha256    TEXT,             -- source STEP hash, for skipping
+    mesh_ver       INTEGER,          -- MESH_VER of the mesh rendered: a new mesh makes the renders stale
     render_ver     INTEGER,
     processed_at   TEXT
 );
@@ -159,6 +160,29 @@ def render_part(renderer, polydata, out_dir, prefix="view"):
     return images, total
 
 
+def render_and_save(conn, renderer, part_id, file_sha):
+    """Render one part from its SOURCE_LEVEL mesh into renders/{part_id} and record the row."""
+    row = {"part_id": part_id, "source_level": SOURCE_LEVEL, "file_sha256": file_sha,
+           "mesh_ver": MESH_VER, "render_ver": RENDER_VER}
+    start = time.perf_counter()
+    try:
+        mesh = trimesh.load(MESH / part_id / f"{SOURCE_LEVEL}.stl")
+        if len(mesh.faces) == 0:
+            raise ValueError("empty mesh")
+        mesh, row["pose_method"] = canonicalize(mesh)
+        _, row["png_bytes"] = render_part(renderer, to_polydata(mesh.vertices, mesh.faces), RENDERS / part_id)
+        row.update(status="ok", n_views=len(VIEWS))
+    except Exception as e:
+        row.update(status="failed", error=f"{type(e).__name__}: {e}")
+        (FAILED / f"{part_id}.render.log").write_text(traceback.format_exc())
+    row["render_seconds"] = round(time.perf_counter() - start, 3)
+    row["processed_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    conn.execute(f"INSERT OR REPLACE INTO renders ({', '.join(row)}) VALUES ({', '.join('?' * len(row))})",
+                 list(row.values()))
+    conn.commit()
+    return row
+
+
 def run_pipeline(conn, args):
     conn.executescript(SCHEMA)
     migrate(conn, SCHEMA)
@@ -166,8 +190,8 @@ def run_pipeline(conn, args):
         """SELECT m.part_id, m.file_sha256 FROM meshes m
            WHERE m.level = ? AND m.status = 'ok' ORDER BY m.part_id""", (SOURCE_LEVEL,)
     ).fetchall()
-    done = set(conn.execute("SELECT part_id, file_sha256 FROM renders WHERE status = 'ok' AND render_ver = ?",
-                            (RENDER_VER,)))
+    done = set(conn.execute("SELECT part_id, file_sha256 FROM renders"
+                            " WHERE status = 'ok' AND render_ver = ? AND mesh_ver = ?", (RENDER_VER, MESH_VER)))
     if args.limit:
         parts = parts[: args.limit]
 
@@ -178,23 +202,7 @@ def run_pipeline(conn, args):
         if not args.force and (part_id, file_sha) in done:
             counts["skipped"] += 1
             continue
-        row = {"part_id": part_id, "source_level": SOURCE_LEVEL, "file_sha256": file_sha, "render_ver": RENDER_VER}
-        start = time.perf_counter()
-        try:
-            mesh = trimesh.load(MESH / part_id / f"{SOURCE_LEVEL}.stl")
-            if len(mesh.faces) == 0:
-                raise ValueError("empty mesh")
-            mesh, row["pose_method"] = canonicalize(mesh)
-            _, row["png_bytes"] = render_part(renderer, to_polydata(mesh.vertices, mesh.faces), RENDERS / part_id)
-            row.update(status="ok", n_views=len(VIEWS))
-        except Exception as e:
-            row.update(status="failed", error=f"{type(e).__name__}: {e}")
-            (FAILED / f"{part_id}.render.log").write_text(traceback.format_exc())
-        row["render_seconds"] = round(time.perf_counter() - start, 3)
-        row["processed_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
-        conn.execute(f"INSERT OR REPLACE INTO renders ({', '.join(row)}) VALUES ({', '.join('?' * len(row))})",
-                     list(row.values()))
-        conn.commit()
+        row = render_and_save(conn, renderer, part_id, file_sha)
         counts[row["status"]] += 1
         seconds.append(row["render_seconds"])
         print(f"[{n}/{len(parts)}] {row['status']:6} {row['render_seconds']:5.2f}s  {part_id}  {row.get('error') or ''}")

@@ -211,6 +211,7 @@ def signature(props):
 
 
 def process(path):
+    """Load and measure one STEP file -> (file_row, part_rows, solids)."""
     file_row = {
         "file_id": path.stem,
         "file_name": path.name,
@@ -234,7 +235,7 @@ def process(path):
     except Exception as e:
         file_row["status"] = "failed"
         file_row["error"] = f"{type(e).__name__}: {e}"
-        (FAILED / f"{path.stem}.log").write_text(traceback.format_exc())
+        (FAILED / f"{path.stem}.extract.log").write_text(traceback.format_exc())
         solids = []
 
     seen = {}
@@ -255,7 +256,7 @@ def process(path):
 
     file_row["load_seconds"] = round(time.perf_counter() - start, 3)
     file_row["processed_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    return file_row, part_rows
+    return file_row, part_rows, solids
 
 
 def insert(conn, table, row):
@@ -295,7 +296,7 @@ def main():
         if not args.force and seen.get(path.stem) == (sha256(path), EXTRACT_VER):
             counts["skipped"] += 1
             continue
-        file_row, part_rows = process(path)
+        file_row, part_rows, _ = process(path)
         save(conn, file_row, part_rows)
 
         ok = [r for r in part_rows if r["status"] == "ok"]

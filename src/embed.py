@@ -19,7 +19,7 @@ import numpy as np
 import torch
 from PIL import Image
 
-from src.config import DATA
+from src.config import DATA, RENDERS
 from src.render import VIEWS
 
 EMBEDDINGS = DATA / "embeddings"
@@ -73,6 +73,11 @@ def embed_dir(embedder, render_dir, part_ids=None):
     images = [render_dir / pid / f"view_{i}.png" for pid in part_ids for i in range(len(VIEWS))]
     vecs = embedder(images)
     return np.array(part_ids), vecs.reshape(len(part_ids), len(VIEWS), -1)
+
+
+def embed_part(embedder, part_id):
+    """One part's renders/{part_id}/view_0..5.png -> (6, D)."""
+    return embed_dir(embedder, RENDERS, [part_id])[1][0]
 
 
 def load(render_set, model):

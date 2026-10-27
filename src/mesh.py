@@ -45,6 +45,8 @@ LEVELS = {
     "medium": (0.001, 0.2, ("glb", "stl")),
 }
 STUDY_LEVELS = {**LEVELS, "fine": (0.0002, 0.1, ("stl",))}  # tolerance comparison only, never written
+MIN_TRIS = 4  # a closed solid needs at least a tetrahedron's 4 triangles
+MAX_TRIS = 500_000  # worst so far is the M3 thread at 231k (medium); beyond this renders and storage blow up
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS meshes (
@@ -142,6 +144,33 @@ def mesh_part(solid, diag, volume, write_dir=None):
     return rows
 
 
+def mesh_and_save(conn, part_id, solid, volume, dims, file_sha, write=True):
+    """Mesh one part at every level; with write, export to data/mesh/{part_id} and record the rows."""
+    diag = math.sqrt(sum(d * d for d in dims))
+    try:
+        rows = mesh_part(solid, diag, volume, MESH / part_id if write else None)
+    except Exception:
+        (FAILED / f"{part_id}.mesh.log").write_text(traceback.format_exc())
+        raise
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    for r in rows:
+        r.update(part_id=part_id, file_sha256=file_sha, mesh_ver=MESH_VER, processed_at=now)
+    if write:
+        for r in rows:
+            conn.execute(f"INSERT OR REPLACE INTO meshes ({', '.join(r)}) VALUES ({', '.join('?' * len(r))})",
+                         list(r.values()))
+        conn.commit()
+    return rows
+
+
+def check_mesh(row):
+    """Reject a part whose mesh (one `meshes` row, the level that gets rendered) is unusable."""
+    if row["status"] != "ok":
+        raise ValueError(f"{row['level']} mesh failed: {row['error']}")
+    if not MIN_TRIS <= row["n_tris"] <= MAX_TRIS:
+        raise ValueError(f"{row['level']} mesh has {row['n_tris']} triangles, outside {MIN_TRIS}..{MAX_TRIS}")
+
+
 def fmt_bytes(n):
     for unit in ("B", "KB", "MB", "GB"):
         if n < 1024 or unit == "GB":
@@ -210,25 +239,11 @@ def main():
         solids = load_solids(path)
         for part_id, file_id, idx, volume, d1, d2, d3, _ in todo:
             n += 1
-            diag = math.sqrt(d1 * d1 + d2 * d2 + d3 * d3)
-            write_dir = None if args.estimate else MESH / part_id
-            try:
-                rows = mesh_part(solids[idx], diag, volume, write_dir)
-            except Exception:
-                (FAILED / f"{part_id}.mesh.log").write_text(traceback.format_exc())
-                raise
-            now = datetime.now(timezone.utc).isoformat(timespec="seconds")
-            for r in rows:
-                r.update(part_id=part_id, file_sha256=file_sha, mesh_ver=MESH_VER, processed_at=now)
+            rows = mesh_and_save(conn, part_id, solids[idx], volume, (d1, d2, d3), file_sha,
+                                 write=not args.estimate)
             all_rows += rows
             print(f"[{n}] {part_id:55} " + "  ".join(
                 f"{r['level']}={r.get('n_tris', 'FAIL')}" for r in rows))
-            if not args.estimate:
-                for r in rows:
-                    cols = ", ".join(r)
-                    conn.execute(f"INSERT OR REPLACE INTO meshes ({cols}) VALUES ({', '.join('?' * len(r))})",
-                                 list(r.values()))
-                conn.commit()
 
     conn.close()
     if skipped:

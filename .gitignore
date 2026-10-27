@@ -2,9 +2,9 @@
 data/**
 !data/*/
 !data/*/.gitkeep
-db/*.sqlite
+db/*.sqlite*
 db/*.db
-qdrant_storage/
+qdrant_data/
 
 # Python
 __pycache__/
