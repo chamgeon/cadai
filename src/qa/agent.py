@@ -7,6 +7,10 @@ parts, or a chain of them); the tools enforce permissions, so the system
 prompt doesn't even know who is asking and stays byte-identical, which keeps
 it in the prompt cache.
 
+After the answer, every part number and report id in it is checked against
+the tool results; an unknown id triggers one rewrite with tools off, and any
+that survive are returned as `unverified_ids`.
+
 Every call is traced (tool, input, size of result, seconds; each LLM request's
 seconds and output tokens) for step 8: routing can be scored separately from the answer.
 ask_many() runs a whole question set concurrently for evaluation.
@@ -21,6 +25,7 @@ Usage:
 import argparse
 import asyncio
 import json
+import re
 import time
 from concurrent.futures import ThreadPoolExecutor
 
@@ -34,6 +39,10 @@ MODEL = "claude-opus-5-5"
 EFFORT = "medium"
 MAX_ROUNDS = 4
 MAX_TOKENS = 16000
+# part numbers, test report and change-notice ids, as src.qa.plm writes them
+ID = re.compile(r"\b(?:TR|ECO)-\d{6}\b|\b[A-Z]{2}-\d{5}\b")
+REPAIR = ("Automatic check: these ids in your answer appear in no tool result: {ids}. Rewrite the whole answer using "
+          "only ids the tools returned, correcting or dropping the others. Don't mention this check.")
 
 SYSTEM = """You answer questions from vehicle R&D engineers about parts, using a parts database (PLM items, ERP supplier data, test reports, change notices) and a shape-similarity index built from the parts' CAD geometry. Notes are in Korean or English.
 
@@ -49,7 +58,8 @@ Searching well:
 
 Answering:
 - Answer in the language of the question. Lead with the answer, then the evidence; keep it short.
-- Cite every fact with the part number and the report or change-notice id in brackets, e.g. BR-19198 [TR-381830]. Cite only ids a tool returned.
+- Cite every fact with the part number and the report or change-notice id in brackets, e.g. BR-19198 [TR-381830]. Cite only ids a tool returned, copied exactly.
+- When many parts match, give the count, group them (by class, status or revision), name at most 10 as examples, and offer the full list.
 - Say which revision a result belongs to when it matters: a rev A failure fixed in rev B is not an open problem."""
 
 
@@ -109,7 +119,7 @@ _tool_thread = ThreadPoolExecutor(max_workers=1)
 
 
 async def ask_async(question, user="normal", client=None, verbose=False):
-    """-> {"answer", "trace", "calls", "rounds", "usage", "stop_reason", "seconds"}.
+    """-> {"answer", "trace", "calls", "rounds", "usage", "stop_reason", "seconds", "repaired", "unverified_ids"}.
 
     trace: one entry per tool call; calls: one per LLM request (seconds, output tokens).
     """
@@ -118,27 +128,37 @@ async def ask_async(question, user="normal", client=None, verbose=False):
     tools = await loop.run_in_executor(_tool_thread, Tools, user)
     messages = [{"role": "user", "content": question}]
     trace, calls, usage = [], [], {}
+    seen = set(ID.findall(question))  # ids the answer may cite: the question's and every tool result's
     start = time.perf_counter()
-    for round_ in range(MAX_ROUNDS + 1):
-        last = round_ == MAX_ROUNDS
+
+    async def request(tools_off, kind):
         t = time.perf_counter()
         response = await client.beta.messages.create(
             model=MODEL, max_tokens=MAX_TOKENS, system=SYSTEM, tools=TOOLS, messages=messages,
-            tool_choice={"type": "none"} if last else {"type": "auto"},  # out of rounds: answer from what you have
+            tool_choice={"type": "none"} if tools_off else {"type": "auto"},
             output_config={"effort": EFFORT},
             cache_control={"type": "ephemeral"},
             betas=["server-side-fallback-2026-07-01"], fallbacks="default",
         )
-        calls.append({"round": round_ + 1, "seconds": round(time.perf_counter() - t, 1),
+        calls.append({"round": len(calls) + 1, "kind": kind, "seconds": round(time.perf_counter() - t, 1),
                       "output_tokens": response.usage.output_tokens,
                       "text_chars": sum(len(b.text) for b in response.content if b.type == "text")})
         for k, v in response.usage.model_dump().items():
             if isinstance(v, int):
                 usage[k] = usage.get(k, 0) + v
+        if response.stop_reason != "refusal":
+            messages.append({"role": "assistant", "content": response.content})  # thinking blocks included, unedited
+        return response
+
+    def result(answer, response, **extra):
+        return {"answer": answer, "trace": trace, "calls": calls, "rounds": len({c["round"] for c in trace}),
+                "usage": usage, "stop_reason": response.stop_reason,
+                "seconds": round(time.perf_counter() - start, 1), **extra}
+
+    for round_ in range(MAX_ROUNDS + 1):
+        response = await request(tools_off=round_ == MAX_ROUNDS, kind="plan")  # out of rounds: answer now
         if response.stop_reason == "refusal":
-            return {"answer": "The request was declined.", "trace": trace, "calls": calls, "rounds": round_,
-                    "usage": usage, "stop_reason": "refusal", "seconds": round(time.perf_counter() - start, 1)}
-        messages.append({"role": "assistant", "content": response.content})  # thinking blocks included, unedited
+            return result("The request was declined.", response, repaired=False, unverified_ids=[])
         uses = [b for b in response.content if b.type == "tool_use"]
         if response.stop_reason != "tool_use" or not uses:
             break
@@ -146,6 +166,7 @@ async def ask_async(question, user="normal", client=None, verbose=False):
         for call in uses:
             t = time.perf_counter()
             text, is_error = await loop.run_in_executor(_tool_thread, tools.run, call.name, call.input)
+            seen.update(ID.findall(text))
             trace.append({"round": round_ + 1, "tool": call.name, "input": call.input, "is_error": is_error,
                           "result_chars": len(text), "seconds": round(time.perf_counter() - t, 2)})
             if verbose:
@@ -155,8 +176,19 @@ async def ask_async(question, user="normal", client=None, verbose=False):
                             **({"is_error": True} if is_error else {})})
         messages.append({"role": "user", "content": results})  # all results of a round in one message
     answer = "".join(b.text for b in response.content if b.type == "text")
-    return {"answer": answer, "trace": trace, "calls": calls, "rounds": len({c["round"] for c in trace}),
-            "usage": usage, "stop_reason": response.stop_reason, "seconds": round(time.perf_counter() - start, 1)}
+
+    # Id post-check: a part number or report id no tool returned is a copying slip or an invention.
+    unverified = sorted(set(ID.findall(answer)) - seen)
+    if not unverified:
+        return result(answer, response, repaired=False, unverified_ids=[])
+    if verbose:
+        print(f"  [check] ids not in any tool result: {', '.join(unverified)}; asking for a corrected answer")
+    messages.append({"role": "user", "content": REPAIR.format(ids=", ".join(unverified))})
+    fixed = await request(tools_off=True, kind="id_repair")
+    if fixed.stop_reason == "refusal":
+        return result(answer, response, repaired=False, unverified_ids=unverified)
+    answer = "".join(b.text for b in fixed.content if b.type == "text")
+    return result(answer, fixed, repaired=True, unverified_ids=sorted(set(ID.findall(answer)) - seen))
 
 
 async def ask_many(items, concurrency=8):
@@ -187,6 +219,8 @@ def main():
     print(f"[{args.user}: programs {', '.join(USERS[args.user])}]  {args.question}\n")
     out = ask(args.question, args.user, verbose=True)
     u = out["usage"]
+    if out["unverified_ids"]:
+        print(f"\nWARNING: ids not found in any tool result: {', '.join(out['unverified_ids'])}")
     print(f"\n{out['answer']}\n\n-- {out['rounds']} tool rounds, {len(out['trace'])} calls, {out['seconds']}s, "
           f"tokens in {u.get('input_tokens', 0)} (cache read {u.get('cache_read_input_tokens', 0)}, "
           f"write {u.get('cache_creation_input_tokens', 0)}) out {u.get('output_tokens', 0)}, stop {out['stop_reason']}")

@@ -108,14 +108,19 @@ def bm25_query(text, keywords=()):
 class M3:
     """BGE-M3: CLS vector as the dense embedding, ReLU(linear(hidden)) per token as the sparse one."""
 
-    def __init__(self):
+    def __init__(self, half=False):
         from transformers import AutoModel, AutoTokenizer
 
         self.tok = AutoTokenizer.from_pretrained(TEXT_MODEL)
-        self.model = AutoModel.from_pretrained(TEXT_MODEL).eval().to(device())
+        # half: queries only, ~1.9 GB less; build() stays fp32 so the stored vectors don't change.
+        # Cast on the CPU: casting on MPS would leave the fp32-sized pool reserved. Eager attention:
+        # the fused fp16 SDPA kernel fails to compile on M1 ("Failed to create function state object").
+        dtype = torch.float16 if half else torch.float32
+        self.model = AutoModel.from_pretrained(TEXT_MODEL, **({"attn_implementation": "eager"} if half else {}))
+        self.model = self.model.eval().to(dtype).to(device())
         self.sparse = torch.nn.Linear(self.model.config.hidden_size, 1)
         self.sparse.load_state_dict(torch.load(hf_hub_download(TEXT_MODEL, "sparse_linear.pt"), map_location="cpu"))
-        self.sparse = self.sparse.to(device())
+        self.sparse = self.sparse.to(dtype).to(device())
         self.special = set(self.tok.all_special_ids)
 
     @torch.no_grad()
@@ -249,7 +254,7 @@ _m3 = None
 def load_model():
     """Load BGE-M3 now (~20 s) instead of inside the first search, where every queued tool call would wait on it."""
     global _m3
-    _m3 = _m3 or M3()
+    _m3 = _m3 or M3(half=True)
 
 
 def search(qc, query, user="normal", mode="hybrid", keywords=(), filters=None, limit=10):

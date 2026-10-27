@@ -244,7 +244,7 @@ Medium is already sub-pixel at the model's 224 px. Fine used 71% of storage and 
 - Questions must use wording the note templates don't (incl. Korean and cross-language), or the eval tests the generator against itself.
 - Score separately: routing (tool chosen), retrieval (recall@k / MRR: BM25, BM25 + expansion, dense, m3_sparse, hybrid; free, no LLM), answer (exact / list F1 / key facts), citations valid, leaks = 0, abstention on unanswerable.
 - Rows to compare: Opus 5.5 medium vs low, Sonnet 5.5 (Haiku 5.5 optional); ~$4 per 60-question pass; repeat 2–3× for spread.
-- The plan's acceptance question verbatim is still unrun.
+- Acceptance question run verbatim after the refactor: counts exact (45 aluminum parts with a fatigue fail, 32 open, 13 fixed), but one listed part number didn't exist (BM-93093 for BM-93975; the model corrected itself at the end). → Built an id post-check: every part number / report id in the answer must appear in the question or a tool result; otherwise one rewrite with tools off, and survivors are returned as `unverified_ids`. Plus a prompt rule to group long lists. Rerun: no unknown ids, list grouped, but still ~2,600 output tokens (mostly thinking) → effort is the lever, not the prompt. Step 8: count how often the repair fires.
 
 **For step 9 (story)**
 - "Text RAG over PLM is a commodity; grounding it in geometry is the differentiator: a new part has no part number yet, only a shape."
