@@ -1,6 +1,6 @@
 """Step 4: load the chosen embeddings into Qdrant and search similar parts.
 
-Chosen in step 4 (src.evaluate): canonical pose + DINOv2. Canonical pose made
+Chosen in step 4 (src.pipeline.evaluate): canonical pose + DINOv2. Canonical pose made
 every model/pooling combination find rotated copies 100% of the time; DINOv2
 won the manual check and spreads its scores (0.6-0.9 vs CLIP's 0.90-0.98), so
 a "no good match" threshold is usable.
@@ -13,7 +13,7 @@ Each part is one Qdrant point with two named vectors:
 plus a payload of step 1 metadata, so results can be filtered or re-ranked by size.
 
 Two ways in:
-    build    full rebuild from the batch .npz of src.embed (drops the collection)
+    build    full rebuild from the batch .npz of src.pipeline.embed (drops the collection)
     pipeline src.pipeline upserts one part at a time via upsert_part() and
              records it in the `embeddings` table, its skip/lineage checkpoint
 
@@ -21,8 +21,8 @@ Qdrant runs as a server (Docker, see README) so the pipeline worker and the UI
 can use it at the same time; local mode locks its folder to one process.
 
 Usage:
-    python -m src.index build
-    python -m src.index query my_bracket_s00 [--using mean] [--limit 5]
+    python -m src.pipeline.index build
+    python -m src.pipeline.index query my_bracket_s00 [--using mean] [--limit 5]
 """
 import argparse
 import sqlite3
@@ -32,7 +32,7 @@ import numpy as np
 from qdrant_client import QdrantClient, models
 
 from src.config import DB_PATH, QDRANT_URL
-from src.embed import load
+from src.pipeline.embed import load
 
 COLLECTION = "parts"
 RENDER_SET, MODEL = "renders", "dinov2"

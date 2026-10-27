@@ -1,11 +1,13 @@
 # cadai
 
 Mini CAD-to-AI pipeline: STEP files → metadata → meshes → renders → embeddings → similar-part search + RAG Q&A.
-See `docs/cad-ai-interview-prep-plan.md` for the step-by-step plan and `logs/daily-log.md` for progress.
+See `docs/cad-ai-interview-prep-plan.md` for the plan, `docs/pipeline.pdf` and `docs/query-flow.pdf` for how
+the system works, and `logs/step-log.md` for progress per step.
 
 ## Setup
     conda env create -f environment.yml
     conda activate cadai
+    cp .env.example .env       # then put your ANTHROPIC_API_KEY in it (gitignored)
 
 Qdrant runs as a server in Docker (first run downloads the official image):
 
@@ -16,17 +18,29 @@ Qdrant runs as a server in Docker (first run downloads the official image):
 Dashboard: http://localhost:6333/dashboard
 
 ## Run
+CAD pipeline (steps 1–5):
+
     python -m src.pipeline run       # watch data/raw: drop a STEP file in, it becomes searchable
     python -m src.pipeline status    # job counts, queued / dead jobs with errors
     python -m src.pipeline retry --dead
-    python -m src.index query my_bracket_s00
+    python -m src.pipeline.index query my_bracket_s00
+
+Q&A (step 6):
+
+    python -m src.qa.plm                     # (re)generate the fake PLM / ERP / test records
+    python -m src.qa.textindex build         # part cards + text index (~5 min)
+    python -m src.qa "Have parts similar to BR-66254 failed?" --user normal
 
 ## Layout
+    src/config.py   shared paths and .env loading
+    src/pipeline/   steps 1–5: extract, mesh, render, canonical, embed, index, evaluate, worker
+    src/qa/         step 6: plm (fake records), textindex, tools, agent
     data/raw        incoming STEP files (they stay here once processed)
     data/failed     dead-letter: error logs + STEP files of dead jobs
     data/mesh       glTF / STL
     data/renders    6 views per part
-    db/             SQLite (parts metadata + jobs queue)
-    qdrant_data/    Qdrant server storage
-    src/            pipeline code
-    logs/           daily log
+    data/plm        facts.json: the truth behind the fake records (step 8 gold labels)
+    db/             SQLite (parts, jobs, PLM tables, part cards)
+    qdrant_data/    Qdrant server storage (collections: parts, docs)
+    docs/           plan, reports, system documents
+    logs/           step log

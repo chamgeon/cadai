@@ -14,3 +14,7 @@ dependencies:
       - qdrant-client
       - streamlit
       - transformers==5.20.2
+      - kiwipiepy          # Korean morphological analyzer for BM25 (step 6)
+      - snowballstemmer    # English stemming for BM25
+      - anthropic          # Q&A agent (step 6)
+      - reportlab          # docs/*.pdf

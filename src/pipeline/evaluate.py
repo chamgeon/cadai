@@ -1,6 +1,6 @@
 """Step 4: score 12 search configurations on tests with known right answers.
 
-    pose      world (as modeled) | canonical (src.canonical)
+    pose      world (as modeled) | canonical (src.pipeline.canonical)
     model     dinov2 | clip
     pooling   mean | max | maxsim (multi-vector: each query view takes its best-matching view)
 
@@ -13,8 +13,8 @@ Tests (the original part must come back; top-1 and top-5 hit rates):
 Plus the tolerance check from step 3: do coarse/fine renders embed like medium?
 
 Usage:
-    python -m src.evaluate               # all tests, 60 parts per rotation test
-    python -m src.evaluate --n 187       # every part
+    python -m src.pipeline.evaluate               # all tests, 60 parts per rotation test
+    python -m src.pipeline.evaluate --n 187       # every part
 """
 import argparse
 import json
@@ -26,12 +26,12 @@ import numpy as np
 import trimesh
 from PIL import Image
 
-from src.canonical import axis_swap_rotation, canonicalize, random_rotation
+from src.pipeline.canonical import axis_swap_rotation, canonicalize, random_rotation
 from src.config import DATA, DB_PATH, MESH, RAW
-from src.embed import MODELS, Embedder, load
-from src.extract import load_solids
-from src.mesh import LEVELS, export, tessellate
-from src.render import COMPARE, VIEWS, Renderer, to_polydata
+from src.pipeline.embed import MODELS, Embedder, load
+from src.pipeline.extract import load_solids
+from src.pipeline.mesh import LEVELS, export, tessellate
+from src.pipeline.render import COMPARE, VIEWS, Renderer, to_polydata
 
 POSES = {"world": "renders_world", "canonical": "renders"}
 POOLINGS = ("mean", "max", "maxsim")

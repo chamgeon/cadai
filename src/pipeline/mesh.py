@@ -9,15 +9,15 @@ the exact surface and a triangle) is a fraction of the bbox diagonal, so a
 
 A third "fine" level was dropped in step 3: it took 71% of mesh storage and 80%
 of meshing time, yet its renders differ from medium in ~0.01% of pixels
-(src.render --compare). It stays in STUDY_LEVELS so that comparison reruns.
+(src.pipeline.render --compare). It stays in STUDY_LEVELS so that comparison reruns.
 
 glTF is defined in metres, so the glb is scaled mm -> m. STL has no units and
 stays in mm like the rest of the database.
 
 Usage:
-    python -m src.mesh --estimate    # tessellate + measure sizes in memory, write nothing
-    python -m src.mesh               # write data/mesh/{part_id}/{level}.{glb,stl} + meshes table
-    python -m src.mesh --limit 20 --force
+    python -m src.pipeline.mesh --estimate    # tessellate + measure sizes in memory, write nothing
+    python -m src.pipeline.mesh               # write data/mesh/{part_id}/{level}.{glb,stl} + meshes table
+    python -m src.pipeline.mesh --limit 20 --force
 """
 import argparse
 import math
@@ -35,7 +35,7 @@ from OCP.TopAbs import TopAbs_REVERSED
 from OCP.TopLoc import TopLoc_Location
 
 from src.config import DB_PATH, FAILED, MESH, RAW
-from src.extract import load_solids, migrate, sha256
+from src.pipeline.extract import load_solids, migrate, sha256
 
 MESH_VER = 3  # bump when LEVELS or the export changes
 

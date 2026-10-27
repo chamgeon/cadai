@@ -8,9 +8,9 @@ Output: data/embeddings/{render_set}__{model}.npz with
     part_ids  (N,)        vectors  (N, 6, D), L2-normalized per view
 
 Usage:
-    python -m src.embed                          # both models, canonical renders
-    python -m src.embed --renders renders_world  # the pre-canonicalization renders
-    python -m src.embed --model dinov2
+    python -m src.pipeline.embed                          # both models, canonical renders
+    python -m src.pipeline.embed --renders renders_world  # the pre-canonicalization renders
+    python -m src.pipeline.embed --model dinov2
 """
 import argparse
 import time
@@ -20,7 +20,7 @@ import torch
 from PIL import Image
 
 from src.config import DATA, RENDERS
-from src.render import VIEWS
+from src.pipeline.render import VIEWS
 
 EMBEDDINGS = DATA / "embeddings"
 MODELS = {

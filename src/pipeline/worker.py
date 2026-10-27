@@ -42,13 +42,13 @@ from functools import cached_property
 
 import OCP
 
-from src import extract, index, mesh, render
+from src.pipeline import extract, index, mesh, render
 from src.config import DB_PATH, FAILED, MESH, RAW, RENDERS
-from src.embed import MODELS, Embedder, embed_part
-from src.extract import EXTRACT_VER, sha256
-from src.index import MODEL
-from src.mesh import MESH_VER
-from src.render import RENDER_VER, SOURCE_LEVEL
+from src.pipeline.embed import MODELS, Embedder, embed_part
+from src.pipeline.extract import EXTRACT_VER, sha256
+from src.pipeline.index import MODEL
+from src.pipeline.mesh import MESH_VER
+from src.pipeline.render import RENDER_VER, SOURCE_LEVEL
 
 PIPELINE_VER = f"e{EXTRACT_VER}.m{MESH_VER}.r{RENDER_VER}.{MODEL}"
 MAX_ATTEMPTS = 3

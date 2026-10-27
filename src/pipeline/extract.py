@@ -8,9 +8,9 @@ A file is skipped only if both its hash and EXTRACT_VER are unchanged, so
 bumping EXTRACT_VER after adding a measurement re-processes everything.
 
 Usage:
-    python -m src.extract            # all files
-    python -m src.extract --limit 20 # first 20 (quick test)
-    python -m src.extract --force    # re-process even if hash and version are unchanged
+    python -m src.pipeline.extract            # all files
+    python -m src.pipeline.extract --limit 20 # first 20 (quick test)
+    python -m src.pipeline.extract --force    # re-process even if hash and version are unchanged
 """
 import argparse
 import hashlib

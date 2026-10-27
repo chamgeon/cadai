@@ -1,7 +1,7 @@
 """Step 3: render 6 fixed views of every part, headless, for image embeddings.
 
 Similarity search compares pictures, so every picture must be taken the same
-way: the part is first rotated into its canonical pose (src.canonical: own
+way: the part is first rotated into its canonical pose (src.pipeline.canonical: own
 axes from its faces, longest along X, shortest along Z), then centered on its
 bbox and scaled so its bounding sphere has radius 1, the camera is orthographic (no perspective size cues), lights move
 with the camera, and material, background and resolution never change.
@@ -9,9 +9,9 @@ with the camera, and material, background and resolution never change.
 Views (Z up): 0 front, 1 back, 2 left, 3 right, 4 top, 5 isometric.
 
 Usage:
-    python -m src.render                 # renders/{part_id}/view_0..5.png from medium.stl
-    python -m src.render --limit 10 --force
-    python -m src.render --compare 20    # same parts at coarse/medium/fine, pixel difference
+    python -m src.pipeline.render                 # renders/{part_id}/view_0..5.png from medium.stl
+    python -m src.pipeline.render --limit 10 --force
+    python -m src.pipeline.render --compare 20    # same parts at coarse/medium/fine, pixel difference
 """
 import argparse
 import math
@@ -27,10 +27,10 @@ import vtk
 from PIL import Image
 from vtk.util import numpy_support
 
-from src.canonical import canonicalize
+from src.pipeline.canonical import canonicalize
 from src.config import DATA, DB_PATH, FAILED, MESH, RAW, RENDERS
-from src.extract import load_solids, migrate
-from src.mesh import MESH_VER, STUDY_LEVELS, export, tessellate
+from src.pipeline.extract import load_solids, migrate
+from src.pipeline.mesh import MESH_VER, STUDY_LEVELS, export, tessellate
 
 RENDER_VER = 2  # bump when views, lighting, size or pose change
 SIZE = 512
