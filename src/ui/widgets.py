@@ -4,6 +4,7 @@ Every label is bilingual, Korean first: bi() where Streamlit renders markdown (t
 buttons, tabs, status), bi_lines() for whole sentences, bi_plain() where it shows plain text (menu,
 placeholders, dropdown options)."""
 import base64
+import html
 from pathlib import Path
 
 import streamlit as st
@@ -16,8 +17,10 @@ from src.config import MESH, RENDERS
 PART_PAGE = "views/part.py"
 VIEW_NAMES = ("정면 · front", "후면 · back", "좌측 · left", "우측 · right", "평면 · top", "iso")
 ISO = 5
-STATUS_COLOR = {"Released": "green", "In Work": "orange", "Obsolete": "gray"}
-RESULT_COLOR = {"fail": "red", "conditional": "orange", "pass": "green"}
+# Test results and status without colour: a symbol, and how filled the mark is. The worst result is the darkest.
+RESULTS = ("fail", "conditional", "pass")  # worst first
+RESULT_MARK = {"fail": "✕", "conditional": "!", "pass": "✓"}
+STATUS_MARK = {"Released": "●", "In Work": "◐", "Obsolete": "○"}
 SIZE_FILTERS = {"전체 · any size": None, "1.5배 이내 · within 1.5×": 1.5, "2배 이내 · within 2×": 2.0}
 
 
@@ -44,8 +47,98 @@ def glb(part_id):
 
 
 def part_link(part_no, label=None):
-    st.page_link(PART_PAGE, label=label or part_no, query_params={"part": part_no},
-                 icon=":material/arrow_forward:")
+    st.page_link(PART_PAGE, label=label or part_no, query_params={"part": part_no})
+
+
+STYLE = """<style>
+/* Pages in the black sidebar: larger and bolder; the current one a white pill. */
+[data-testid="stSidebarNavLink"] { padding: 0.45rem 0.75rem; margin: 2px 0; border-radius: 6px; }
+[data-testid="stSidebarNavLink"] p { font-size: 15px; font-weight: 500; color: #d1d9e0; }
+[data-testid="stSidebarNavLink"] [data-testid="stIconMaterial"] { font-size: 1.25rem; color: #d1d9e0; }
+[data-testid="stSidebarNavLink"]:hover { background: #262c36 !important; }
+[data-testid="stSidebarNavLink"][aria-current="page"] { background: #f0f6fc !important; }
+[data-testid="stSidebarNavLink"][aria-current="page"] p,
+[data-testid="stSidebarNavLink"][aria-current="page"] [data-testid="stIconMaterial"] { color: #0d1117; font-weight: 600; }
+/* Part numbers as small black buttons. */
+[data-testid="stPageLink-NavLink"] { background: #1f2328 !important; padding: 3px 10px; border-radius: 6px; }
+[data-testid="stPageLink-NavLink"] p { color: #ffffff; font-weight: 600; }
+[data-testid="stPageLink-NavLink"]:hover { background: #000000 !important; }
+/* The fields where things happen (search, part number, chat): white, a thick black border, larger text. */
+.st-key-search_q [data-testid="stTextInputRootElement"],
+.st-key-part_box [data-testid="stTextInputRootElement"] {
+    height: 44px; border: 2px solid #1f2328 !important; border-radius: 10px; background: #ffffff !important;
+    box-shadow: 0 4px 14px rgba(31, 35, 40, 0.10); }
+.st-key-search_q input, .st-key-part_box input { font-size: 15px; background: #ffffff !important; }
+.st-key-search_q [data-testid="stWidgetLabel"] p,
+.st-key-part_box [data-testid="stWidgetLabel"] p { font-size: 16px; font-weight: 600; }
+[data-testid="stChatInput"] > div {
+    border: 2px solid #1f2328 !important; border-radius: 14px; background: #ffffff !important;
+    box-shadow: 0 4px 14px rgba(31, 35, 40, 0.10); }
+[data-testid="stChatInputTextArea"] { font-size: 16px; background: #ffffff !important; }
+/* Chat (src/ui/views/ask.py): your turn on the right, the question in a black bubble; answers on the left. */
+[class*="st-key-turn-"] { margin-top: 1.25rem; }
+[data-testid="stLayoutWrapper"]:has(> [class*="st-key-files-"]) { max-width: 85%; margin-left: auto; }
+[data-testid="stLayoutWrapper"]:has(> [class*="st-key-you-"]) { max-width: 75%; width: fit-content !important; }
+[class*="st-key-you-"] {
+    background: #1f2328; border-radius: 18px 18px 4px 18px; padding: 10px 16px;
+    width: fit-content !important; flex: 0 1 auto !important; }
+[class*="st-key-you-"] p { color: #ffffff; }
+/* Test results (result_chip) and status (status_badge), told apart without colour. */
+.chip { display: inline-block; font-size: 12px; font-weight: 600; line-height: 18px; padding: 0 7px;
+        border-radius: 999px; border: 1px solid #1f2328; white-space: nowrap; vertical-align: 1px; }
+.chip-fail { background: #1f2328; color: #ffffff; }
+.chip-conditional { background: #ffffff; color: #1f2328; }
+.chip-pass { background: #f6f8fa; color: #1f2328; border-color: #8c959f; }
+.chip-none { background: transparent; color: #59636e; border: 1px dashed #d0d7de; font-weight: 500; }
+.status { white-space: nowrap; font-weight: 500; }
+.status-released { font-weight: 700; }
+.status-obsolete { color: #59636e; text-decoration: line-through; }
+/* Part tiles (part_tile): fixed rows, so the chips of tiles in one row start at the same height. */
+.tile-name { font-weight: 600; line-height: 1.35; height: 2.7em; overflow: hidden; margin-bottom: 4px;
+             display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.tile-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.6; }
+.tile-chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0 4px; }
+.en { color: #59636e; font-size: 0.8em; }
+</style>"""
+
+
+SPLASH = """<style>
+.splash { color: #1f2328; min-height: 70vh; display: flex;
+          flex-direction: column; align-items: center; justify-content: center; gap: 12px; }
+.splash-name { font-size: 40px; font-weight: 700; letter-spacing: -0.5px; }
+.splash-msg { font-size: 17px; font-weight: 600; }
+.splash-msg span, .splash-sub { color: #59636e; font-weight: 400; }
+.splash-sub { font-size: 13px; }
+.splash-bar { width: 280px; height: 4px; background: #eaeef2; border-radius: 2px; overflow: hidden; margin-top: 8px; }
+.splash-bar div { width: 35%; height: 100%; background: #1f2328; border-radius: 2px;
+                  animation: splash-slide 1.3s ease-in-out infinite; }
+@keyframes splash-slide { from { transform: translateX(-100%); } to { transform: translateX(290%); } }
+</style>
+<div class="splash">
+  <img src="ARM" width="72" height="72" alt="">
+  <div class="splash-name">cadai</div>
+  <div class="splash-msg">모델을 불러오는 중 <span>· Loading models</span></div>
+  <div class="splash-sub">BGE-M3 · Kiwi · DINOv2 · CAD worker — 서버 시작 시 한 번, 약 15초 · once per server start, ~15 s</div>
+  <div class="splash-bar"><div></div></div>
+</div>"""
+
+
+ARM_SVG = (Path(__file__).parent / "static" / "icon.svg").read_text()  # the logo's robot arm
+# st.html strips inline <svg>: the arm goes in as an image
+SPLASH = SPLASH.replace("ARM", "data:image/svg+xml;base64," + base64.b64encode(ARM_SVG.encode()).decode())
+
+
+def splash():
+    """The loading screen while models() loads (first session after a server start) -> its placeholder, to empty."""
+    holder = st.empty()
+    with holder.container():
+        st.html(SPLASH)
+    return holder
+
+
+def style():
+    """What the theme in .streamlit/config.toml can't set. Once per run, from app.py."""
+    st.html(STYLE)
 
 
 def scroll_to_top(token):
@@ -58,20 +151,28 @@ def scroll_to_top(token):
 
 
 def scroll_to_last_message(token):
-    """Put the newest chat message at the top of the view: Streamlit doesn't follow a growing chat, so a new
+    """Put the newest chat turn at the top of the view: Streamlit doesn't follow a growing chat, so a new
     question and its answer would appear below what's on screen. `token` as in scroll_to_top()."""
-    st.html(f"<script>/* {token} */ [...document.querySelectorAll('[data-testid=\"stChatMessage\"]')].at(-1)"
+    st.html(f"<script>/* {token} */ [...document.querySelectorAll('[class*=\"st-key-turn-\"]')].at(-1)"
             "?.scrollIntoView({block: 'start', behavior: 'smooth'})</script>", unsafe_allow_javascript=True)
 
 
 def status_badge(status):
-    return f":{STATUS_COLOR.get(status, 'gray')}-badge[{status}]"
+    """● Released (bold) · ◐ In Work · ○ Obsolete (grey, struck): HTML, so st.markdown(..., unsafe_allow_html=True)."""
+    css = status.lower().replace(" ", "-")
+    return f'<span class="status status-{css}">{STATUS_MARK.get(status, "○")} {status}</span>'
+
+
+def result_chip(result, count=None):
+    """fail: solid black ✕ · conditional: black outline ! · pass: light grey ✓ (HTML, as status_badge)."""
+    text = f"{count} {result}" if count is not None else result
+    return f'<span class="chip chip-{result}">{RESULT_MARK[result]} {text}</span>'
 
 
 def results_badges(counts):
-    """{"fail": 2, "pass": 3} -> red/orange/green badges, worst first; "no tests" if empty."""
-    shown = [f":{RESULT_COLOR[r]}-badge[{counts[r]} {r}]" for r in RESULT_COLOR if counts.get(r)]
-    return " ".join(shown) or ":gray-badge[시험 없음] :gray[:small[no tests]]"
+    """{"fail": 2, "pass": 3} -> chips, worst first; "no tests" if empty."""
+    shown = [result_chip(r, counts[r]) for r in RESULTS if counts.get(r)]
+    return " ".join(shown) or '<span class="chip chip-none">시험 없음 · no tests</span>'
 
 
 def card_markdown(text):
@@ -98,13 +199,16 @@ def card_markdown(text):
     return "\n\n".join(b for b in blocks + ["  \n".join(rows)] if b)
 
 
-def part_tile(part_id, part_no, lines):
-    """Iso render, link to the part, then caption lines (markdown)."""
+def part_tile(part_id, part_no, name, lines=(), chips=""):
+    """Iso render, link to the part, then a fixed layout so tiles in a row line up: the name in exactly two
+    lines, each of `lines` (HTML) in one, then the chips on their own row."""
+    body = (f'<div class="tile-name">{html.escape(name)}</div>'
+            + "".join(f'<div class="tile-line">{line}</div>' for line in lines)
+            + (f'<div class="tile-chips">{chips}</div>' if chips else ""))
     with st.container(border=True):
         st.image(str(render(part_id)), width="stretch")
         part_link(part_no)
-        for line in lines:
-            st.markdown(line)
+        st.markdown(body, unsafe_allow_html=True)
 
 
 @st.cache_data(max_entries=200, show_spinner=False)
@@ -169,10 +273,8 @@ def similar_grid(hits):
     for row in range(0, len(hits), 5):
         for col, s in zip(st.columns(5), hits[row:row + 5]):
             with col:
-                part_tile(s["part_id"], s["part_no"], [
-                    s["name"],
-                    f"유사도 **{s['similarity']:.2f}** :gray[:small[similarity]]",
-                    f"크기 ×{s['size_ratio']:.2f} :gray[:small[size]]",
-                    f"{s['material']} {status_badge(s['status'])}",
-                    results_badges(s["test_results"]),
-                ])
+                part_tile(s["part_id"], s["part_no"], s["name"], [
+                    f'유사도 <b>{s["similarity"]:.2f}</b> <span class="en">similarity</span>',
+                    f'크기 ×{s["size_ratio"]:.2f} <span class="en">size</span>',
+                    f'{html.escape(s["material"])} {status_badge(s["status"])}',
+                ], results_badges(s["test_results"]))

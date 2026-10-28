@@ -15,6 +15,7 @@ Files can be attached to a question:
 """
 import asyncio
 import hashlib
+import html
 import io
 import re
 import tempfile
@@ -217,15 +218,13 @@ def show_answer(out, user):
         for row in range(0, len(cited), 5):
             for col, p in zip(st.columns(5), cited[row:row + 5]):
                 with col:
-                    widgets.part_tile(p["card"]["part_id"], p["card"]["part_no"], [
-                        p["latest"]["name"],
-                        f"{p['latest']['material']} {widgets.status_badge(p['latest']['status'])}",
+                    widgets.part_tile(p["card"]["part_id"], p["card"]["part_no"], p["latest"]["name"], [
+                        f"{html.escape(p['latest']['material'])} {widgets.status_badge(p['latest']['status'])}",
                     ])
     u = out["usage"]
     tokens, n_calls = u.get("output_tokens", 0), len(out["trace"])
-    st.caption(bi(f"{out['seconds']}초 · 도구 라운드 {out['rounds']} · 도구 호출 {n_calls} · 출력 토큰 {tokens:,}",
-                  f"{plural(out['rounds'], 'tool round')} · {plural(n_calls, 'tool call')} · output tokens")
-               + (" · " + bi("번호 사후 수정됨", "ids corrected by the post-check") if out["repaired"] else ""))
+    st.caption(f"{out['seconds']} s · {plural(out['rounds'], 'tool round')} · {plural(n_calls, 'tool call')} · "
+               f"{tokens:,} output tokens" + (" · ids corrected by the post-check" if out["repaired"] else ""))
 
 
 def run(question, user, convo, attachments):
@@ -261,6 +260,17 @@ def run(question, user, convo, attachments):
     return out
 
 
+def your_turn(i):
+    """Your side of turn i: right-aligned; attachments as cards (files-i), then the question in a black bubble
+    (you-i). Styled in widgets.STYLE by these keys; no avatars."""
+    return st.container(horizontal_alignment="right", key=f"turn-{i}")
+
+
+def bubble(i, text):
+    with st.container(key=f"you-{i}", width="content"):
+        st.markdown(text)
+
+
 user = st.session_state.user
 prefill = st.session_state.pop("ask_prefill", None)
 if prefill:  # a handoff or an example starts a new topic
@@ -273,13 +283,17 @@ left.caption(bi_lines("열람 가능한 기록으로만 답하고 모든 사실�
 if chat:
     right.button(bi("새 대화", "New chat"), icon=":material/add_comment:", on_click=new_chat, width="stretch")
 
-for msg in chat:
-    with st.chat_message(msg["role"]):
-        if msg["role"] == "user":
-            for a in msg.get("attachments", ()):
-                show_attachment(a)
-            st.markdown(msg["content"])
-        else:
+for i, msg in enumerate(chat):
+    if msg["role"] == "user":
+        with your_turn(i):
+            if msg.get("attachments"):
+                with st.container(key=f"files-{i}"):
+                    for a in msg["attachments"]:
+                        show_attachment(a)
+            if msg["content"]:
+                bubble(i, msg["content"])
+    else:
+        with st.container(key=f"answer-{i}"):
             if msg["out"].get("trace"):
                 n_calls = len(msg["out"]["trace"])
                 with st.expander(bi(f"도구 호출 {n_calls}", plural(n_calls, "tool call"))):
@@ -307,22 +321,26 @@ if not chat and not question and not files:  # not while answering: a click woul
               on_click=ask, args=(SAMPLE_QUESTION, (SAMPLE,)), width="stretch")
 
 if question or files:
-    with st.chat_message("user"):
+    i = len(chat)
+    with your_turn(i):
         attachments, shown = [], []
-        for name, content in files:
-            sent, view = attach(name, content, user, convo)
-            show_attachment(view)
-            shown.append(view)
-            if sent:
-                attachments.append(sent)
+        if files:
+            with st.container(key=f"files-{i}"):
+                for name, content in files:
+                    sent, view = attach(name, content, user, convo)
+                    show_attachment(view)
+                    shown.append(view)
+                    if sent:
+                        attachments.append(sent)
         if not question:
             question = (SAMPLE_QUESTION if any(a["kind"] == "step" for a in attachments)
                         else "What does this show?" if attachments else "")
-        st.markdown(question)
-    widgets.scroll_to_last_message(len(chat))
+        if question:
+            bubble(i, question)
+    widgets.scroll_to_last_message(i)
     out = None
     if question:  # nothing to ask when every attachment failed and no text came with them
-        with st.chat_message("assistant"):
+        with st.container(key=f"answer-{i + 1}"):
             out = run(question, user, convo, attachments)
             show_answer(out, user)
     chat.append({"role": "user", "content": question, "attachments": shown})

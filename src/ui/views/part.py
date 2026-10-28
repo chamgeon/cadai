@@ -2,11 +2,13 @@
 
 The part comes from ?part=BR-66254, so links from search, chat and similar parts land here.
 """
+import html
+
 import pandas as pd
 import streamlit as st
 
 from src.ui import data, widgets
-from src.ui.widgets import RESULT_COLOR, bi, bi_plain
+from src.ui.widgets import RESULT_MARK, bi, bi_lines, bi_plain
 
 DEMO_PARTS = ("BR-66254", "BK-11639", "BD-28744")  # the bracket modeled in step 2; parts with failed tests
 
@@ -36,7 +38,7 @@ else:
     st.query_params.pop("part", None)
 
 if not part_no:
-    st.caption(bi("검색에서 부품을 열거나, 아래 부품을 열어 보세요", "open a part from Search, or try one of these"))
+    st.caption(bi_lines("검색에서 부품을 열거나, 아래 부품을 열어 보세요", "Open a part from Search, or try one of these"))
     for demo in DEMO_PARTS:
         widgets.part_link(demo)
     st.stop()
@@ -56,13 +58,14 @@ pid = card["part_id"]
 size = " · " + "×".join(f"{geo[k]:.0f}" for k in ("dim_1", "dim_2", "dim_3")) + " mm" if geo else ""
 st.title(f"{part_no} · {latest['name']}")
 st.markdown(f"rev **{card['rev']}** {widgets.status_badge(latest['status'])} · {latest['part_class']} · "
-            f"{latest['material']}{size} · {bi('프로그램', 'program')} {card['program']} · {latest['owner_team']}")
+            f"{latest['material']}{size} · {bi('프로그램', 'program')} {card['program']} · "
+            f"{html.escape(latest['owner_team'])}", unsafe_allow_html=True)
 
 left, right = st.columns([3, 2], gap="large")
 with left:
     widgets.render_views([widgets.render(pid, view) for view in range(6)], widgets.glb(pid), key="part_3d")
 with right:
-    st.caption(bi("PLM 기록 · 질문 에이전트가 읽는 것과 같은 기록", "PLM record, as the Q&A agent reads it"))
+    st.caption(bi_lines("PLM 기록: 질문 에이전트가 읽는 것과 같은 기록", "PLM record, as the Q&A agent reads it"))
     with st.container(border=True):
         st.markdown(widgets.card_markdown(card["text"]))
     if geo:
@@ -81,8 +84,9 @@ with tab_tests:
     if tests.empty:
         st.caption(bi("시험 성적서 없음", "no test reports"))
     else:
-        styled = tests.style.map(lambda r: f"color: {RESULT_COLOR.get(r, 'inherit')}; font-weight: 600",
-                                 subset=["result"])
+        tests["result"] = tests["result"].map(lambda r: f"{RESULT_MARK.get(r, '')} {r}")  # as the chips: no colour
+        styled = tests.style.map(lambda r: "font-weight: 700" if r.endswith("fail") else
+                                 "color: #59636e" if r.endswith("pass") else "font-weight: 600", subset=["result"])
         st.dataframe(styled, hide_index=True, width="stretch",
                      column_config={"note": st.column_config.TextColumn("note", width="large")})
 with tab_ecos:
@@ -108,8 +112,8 @@ with tab_geo:
         ], columns=[bi_plain("항목", "property"), bi_plain("값", "value")]), hide_index=True)
 
 st.subheader(bi("유사 부품", "Similar parts"))
-st.caption(bi("형상 기준: 부품당 렌더 6장을 DINOv2로 비교, 열람 가능한 부품만 순위에 포함",
-              "by shape: 6 renders per part, DINOv2; only parts you may see are ranked"))
+st.caption(bi_lines("형상 기준: 부품당 렌더 6장을 DINOv2로 비교, 열람 가능한 부품만 순위에 포함",
+                    "By shape: 6 renders per part, DINOv2. Only parts you may see are ranked."))
 limit, max_size_ratio = widgets.similar_controls("part")
 sim = data.similar(user, part_no, limit, max_size_ratio)
 if "error" in sim or not sim["similar"]:

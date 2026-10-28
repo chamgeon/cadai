@@ -32,10 +32,21 @@ Q&A (step 6):
     python -m src.qa.textindex build         # part cards + text index (~5 min)
     python -m src.qa "Have parts similar to BR-66254 failed?" --user normal
 
+Demo app (step 7): Qdrant running, then
+
+    streamlit run src/ui/app.py --server.fileWatcherType none
+
+Opens http://localhost:8501 (bound to localhost: the app spends the API key). The first load after a start
+takes ~15 s (models); later page loads are instant. `--server.fileWatcherType none` keeps each new browser
+session fast (0.6 s instead of ~5 s); restart the app after changing code outside `src/ui/views/`.
+Search, Part and Ask pages; in Ask, attach a STEP file (or click the sample-bracket example) to find similar
+parts and ask about them.
+
 ## Layout
     src/config.py   shared paths and .env loading
     src/pipeline/   steps 1–5: extract, mesh, render, canonical, embed, index, evaluate, worker
     src/qa/         step 6: plm (fake records), textindex, tools, agent
+    src/ui/         step 7: Streamlit app (app.py, views/, widgets, CAD worker); theme in .streamlit/config.toml
     data/raw        incoming STEP files (they stay here once processed)
     data/failed     dead-letter: error logs + STEP files of dead jobs
     data/mesh       glTF / STL

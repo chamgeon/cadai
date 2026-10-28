@@ -21,12 +21,20 @@ import streamlit as st
 # import torchvision, which isn't installed, and each logs a traceback (~100). Harmless: the import fails first.
 logging.getLogger("streamlit.watcher.local_sources_watcher").setLevel(logging.ERROR)
 
-from src.config import DB_PATH
-from src.qa.plm import USERS
-from src.ui import resources
-from src.ui.widgets import bi, bi_lines, bi_plain
+STATIC = Path(__file__).parent / "static"
+st.set_page_config(page_title="cadai", page_icon=str(STATIC / "icon.svg"), layout="wide")  # the logo's arm
 
-st.set_page_config(page_title="cadai", page_icon=":material/precision_manufacturing:", layout="wide")
+# The loading screen goes up before the heavy imports below (torch, transformers: several seconds of blank page
+# on the first run after a server start). Once the models are loaded, resources is already imported and cached.
+from src.ui import widgets  # noqa: E402
+from src.ui.widgets import bi, bi_lines, bi_plain  # noqa: E402
+
+loaded = sys.modules.get("src.ui.resources")
+splash = None if loaded and loaded.models_loaded() else widgets.splash()
+
+from src.config import DB_PATH  # noqa: E402
+from src.qa.plm import USERS  # noqa: E402
+from src.ui import resources  # noqa: E402
 
 
 @st.cache_data(ttl=30)
@@ -54,8 +62,12 @@ def user_changed():
     st.session_state.pop("convo", None)  # nor in the agent's context
 
 
+widgets.style()
+st.logo(str(STATIC / "logo_dark.svg"), size="large", icon_image=str(STATIC / "icon.svg"))  # icon: sidebar closed
 cad = resources.cad()  # first: it starts loading in its own process without waiting
 models = resources.models()
+if splash:
+    splash.empty()
 
 with st.sidebar:
     st.selectbox(bi("사용자", "User"), list(USERS), key="user", on_change=user_changed,

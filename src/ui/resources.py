@@ -25,6 +25,13 @@ from src.pipeline.index import MODEL, client
 from src.qa import agent, textindex
 
 
+_models_loaded = False  # set once models() has run: app.py shows its loading screen only before that
+
+
+def models_loaded():
+    return _models_loaded
+
+
 def on_tool_thread(fn, *args, **kwargs):
     return agent._tool_thread.submit(fn, *args, **kwargs).result()
 
@@ -74,8 +81,9 @@ class CadWorker:
             return self._read()
 
 
-@st.cache_resource(show_spinner="모델 로딩 중, 서버 시작 시 한 번 (~30초) · Loading models, once per server start (~30 s)…")
+@st.cache_resource(show_spinner=False)  # app.py draws widgets.splash() instead
 def models():
+    global _models_loaded
     start = time.perf_counter()
 
     def load():
@@ -87,6 +95,7 @@ def models():
         return embedder
 
     embedder = on_tool_thread(load)
+    _models_loaded = True
     return SimpleNamespace(embedder=embedder, seconds=round(time.perf_counter() - start, 1))
 
 

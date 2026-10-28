@@ -9,3 +9,53 @@ toolbarMode = "minimal"   # demo: no deploy button or developer menu
 
 [browser]
 gatherUsageStats = false
+
+# GitHub-like: black on white, visible 1px borders, black as the only accent, secondary text dark enough to read.
+# System fonts only, so the demo needs no network (Korean falls back to Apple SD Gothic Neo).
+[theme]
+base = "light"
+primaryColor = "#1f2328"
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#f6f8fa"
+textColor = "#1f2328"
+linkColor = "#1f2328"
+linkUnderline = true
+borderColor = "#d0d7de"
+showWidgetBorder = true
+baseRadius = "6px"
+buttonRadius = "6px"
+font = "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, 'Apple SD Gothic Neo', sans-serif"
+codeFont = "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace"
+codeBackgroundColor = "#f6f8fa"
+baseFontSize = 14
+headingFontWeights = 600
+headingFontSizes = ["2rem", "1.5rem", "1.25rem"]
+paddingTop = "4.5rem"
+metricValueFontWeight = 600
+metricValueFontSize = "1.6rem"
+grayColor = "#59636e"
+grayTextColor = "#59636e"
+grayBackgroundColor = "#eff2f5"
+greenColor = "#1a7f37"
+greenTextColor = "#1a7f37"
+redColor = "#d1242f"
+redTextColor = "#d1242f"
+orangeColor = "#bc4c00"
+orangeTextColor = "#bc4c00"
+yellowColor = "#9a6700"
+blueColor = "#0969da"
+blueTextColor = "#0969da"
+dataframeBorderColor = "#d0d7de"
+dataframeHeaderBackgroundColor = "#f6f8fa"
+
+# A black sidebar (GitHub's dark canvas) holding the pages, the user and the status.
+[theme.sidebar]
+backgroundColor = "#0d1117"
+secondaryBackgroundColor = "#151b23"
+textColor = "#f0f6fc"
+primaryColor = "#f0f6fc"
+borderColor = "#3d444d"
+grayColor = "#9198a1"
+grayTextColor = "#9198a1"
+linkColor = "#f0f6fc"
+showSidebarBorder = false

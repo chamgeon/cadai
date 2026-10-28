@@ -2,12 +2,13 @@
 
 The query and filters are remembered for the session, so coming back from a part shows the same results.
 """
+import html
 import re
 
 import streamlit as st
 
 from src.ui import data, widgets
-from src.ui.widgets import RESULT_COLOR, bi, bi_plain
+from src.ui.widgets import bi, bi_lines, bi_plain
 
 PART_NO = re.compile(r"\b[A-Z]{2}-\d{5}\b")
 EXAMPLES = ("crack near bolt hole", "볼트 구멍 균열", "salt spray corrosion", "wall thickness increased after failure")
@@ -62,11 +63,10 @@ with st.spinner(bi("검색 중…", "Searching…")):
     res = data.search(user, query, filters)
 parts = res["parts"]
 if not parts:
-    st.info(bi("결과 없음. 필터를 줄이거나 다른 단어로 검색해 보세요.", "Nothing found. Fewer filters or other words may help."))
+    st.info(bi_lines("결과 없음. 필터를 줄이거나 다른 단어로 검색해 보세요.", "Nothing found. Fewer filters or other words may help."))
     st.stop()
-st.caption(bi(f"부품 {len(parts)}개 · 일치 문서 {res['n_chunks']}개 · {res['seconds']}초",
-              f"{len(parts)} parts from {res['n_chunks']} matching documents")
-           + (" · " + bi(f"상위 {MAX_PARTS}개 표시", f"first {MAX_PARTS} shown") if len(parts) > MAX_PARTS else ""))
+st.caption(f"{len(parts)} parts from {res['n_chunks']} matching documents · {res['seconds']} s"
+           + (f" · first {MAX_PARTS} shown" if len(parts) > MAX_PARTS else ""))
 
 for p in parts[:MAX_PARTS]:
     with st.container(border=True):
@@ -76,7 +76,8 @@ for p in parts[:MAX_PARTS]:
             head, badges = st.columns([3, 2], vertical_alignment="center")
             with head:
                 widgets.part_link(p["part_no"], label=f"{p['part_no']} · {p['name']}")
-            badges.markdown(f"{p['part_class']} · {p['material']} {widgets.status_badge(p['status'])}")
+            badges.markdown(f"{p['part_class']} · {p['material']} {widgets.status_badge(p['status'])}",
+                            unsafe_allow_html=True)
             for c in p["chunks"][:SNIPPETS]:
                 if c["kind"] == "card":
                     text = c["text"].split("\n", 2)[-1].replace("\n", " ")  # skip the name lines
@@ -85,8 +86,9 @@ for p in parts[:MAX_PARTS]:
                 ko, en = KIND_LABEL[c["kind"]]
                 tag = f"**{ko}** :gray[:small[{en}]] {c['doc_id'] if c['kind'] != 'card' else ''} rev {c['rev']}"
                 if c.get("result"):
-                    tag += f" · {c['test_type']} :{RESULT_COLOR[c['result']]}-badge[{c['result']}]"
-                st.markdown(f"{tag}  \n{text[:240] + ('…' if len(text) > 240 else '')}")
+                    tag += f" · {c['test_type']} {widgets.result_chip(c['result'])}"
+                text = html.escape(text[:240] + ("…" if len(text) > 240 else ""))  # shown as HTML for the chip
+                st.markdown(f"{tag}  \n{text}", unsafe_allow_html=True)
             if len(p["chunks"]) > SNIPPETS:
                 n = len(p["chunks"]) - SNIPPETS
                 st.caption(bi(f"일치 문서 {n}개 더", f"and {n} more matching document{'s' if n > 1 else ''}"))
