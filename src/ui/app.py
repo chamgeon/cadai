@@ -1,4 +1,4 @@
-"""Step 7: the engineer-facing app: search, part detail with similar parts, Q&A, upload.
+"""Step 7: the engineer-facing app: search, part detail with similar parts, Q&A with attached files.
 
     streamlit run src/ui/app.py
 
@@ -76,6 +76,5 @@ pages = [
     st.Page("views/search.py", title="Search", icon=":material/search:", default=True),
     st.Page("views/part.py", title="Part", icon=":material/category:"),
     st.Page("views/ask.py", title="Ask", icon=":material/chat:"),
-    st.Page("views/upload.py", title="Upload", icon=":material/upload_file:"),
 ]
 st.navigation(pages).run()

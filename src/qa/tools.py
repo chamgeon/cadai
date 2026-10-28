@@ -4,7 +4,8 @@ The LLM never writes SQL and never sees a record outside the user's programs:
     lookup_part    one part's card plus its test reports and change notices
     query_parts    count / list / group parts by fields; parameters only, the SQL is fixed here
     search_notes   hybrid search over cards, test notes and change notices (src.qa.textindex)
-    similar_parts  step 4's image similarity, restricted to visible parts before ranking
+    similar_parts  step 4's image similarity, restricted to visible parts before ranking; also takes an
+                   attached shape's handle (NEW-1), whose view vectors the UI passes in as `shapes`
 A part in another program and a part that doesn't exist get the same "not found"
 answer, so the existence of a hidden part never leaks. The database is opened
 read-only: no tool can write.
@@ -28,8 +29,9 @@ def _json(obj):
 
 
 class Tools:
-    def __init__(self, user):
+    def __init__(self, user, shapes=None):
         self.user = user
+        self.shapes = shapes or {}  # handle -> {"views", "size"}: solids of attached STEP files, not in the index
         self.programs = USERS[user]
         self.conn = sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True)
         self.conn.row_factory = sqlite3.Row
@@ -116,6 +118,10 @@ class Tools:
 
     def similar_parts(self, part_no, limit=5, max_size_ratio=None):
         """Parts that look like `part_no`, among those the user may see; other solids of its own file excluded."""
+        if part_no in self.shapes:
+            shape = self.shapes[part_no]
+            found = self.similar_to(shape["views"], shape["size"], limit, max_size_ratio)
+            return {"query": {"shape": part_no, "size_mm": round(shape["size"], 1)}, **found}
         card = self._card(part_no)
         if card is None:
             return {"error": f"no part {part_no} found"}

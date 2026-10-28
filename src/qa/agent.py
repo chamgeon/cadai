@@ -11,6 +11,9 @@ After the answer, every part number and report id in it is checked against
 the tool results; an unknown id triggers one rewrite with tools off, and any
 that survive are returned as `unverified_ids`.
 
+A question can carry attachments (see _content): solids of a STEP file, which
+get handles (NEW-1) that similar_parts accepts, images and documents.
+
 A conversation continues by passing the previous result's `messages` and `seen`
 back in: the whole transcript, tool results included, so a follow-up ("which of
 those are steel?") can reuse what was already read. The request is cached
@@ -31,6 +34,7 @@ Usage:
 """
 import argparse
 import asyncio
+import base64
 import json
 import re
 import time
@@ -65,6 +69,8 @@ Searching well:
 - Materials: AL6061-T6 (aluminum), ADC12 (die-cast aluminum), SPCC and SPFH590 (steel sheet), S45C (carbon steel), SUS304 (stainless), PA66-GF30, PP-T20, ABS (plastics).
 - Test types: fatigue (durability), salt_spray, heat_aging, cold_impact, vibration, wear, static, dimensional, nvh.
 - You have at most 4 rounds of tool calls. Make independent calls in parallel within one round.
+- Attached STEP files: each solid has a handle (NEW-1, NEW-2…), no part number and no records. To find existing parts that look like it, call similar_parts with the handle. Its render is attached so you can see it.
+- Attached images and documents come from the engineer, not the database: use them as context, but cite only database ids as evidence.
 - Follow-up questions may refer to earlier answers. Reuse earlier tool results when they already answer it; otherwise call the tools again.
 
 Answering:
@@ -119,7 +125,8 @@ TOOLS = [
     _tool("similar_parts", "Parts whose shape looks like the given part (6-view image similarity from CAD renders), "
           "with each one's test result counts. Similarity ignores size; max_size_ratio keeps parts within that "
           "factor of the query's size.",
-          {"part_no": {"type": "string"}, "limit": {"type": "integer", "description": "1-20"},
+          {"part_no": {"type": "string", "description": "a part number, or an attached shape's handle (NEW-1)"},
+           "limit": {"type": "integer", "description": "1-20"},
            "max_size_ratio": _opt("number")}),
 ]
 
@@ -129,17 +136,61 @@ TOOLS = [
 _tool_thread = ThreadPoolExecutor(max_workers=1)
 
 
+MAX_SHAPE_RENDERS = 4  # iso renders sent per question; a file can hold dozens of solids
+
+
+def _content(question, attachments):
+    """The question as content blocks: one text block per STEP file (its solids' handles and sizes) plus their iso
+    renders, then images and documents, then the question. attachments: dicts with "kind":
+        step   {"name", "shapes": [{"handle", "dims", "volume", "render"}]}
+        image  {"name", "media_type", "data"}      pdf {"name", "data"}      text {"name", "text"}
+    """
+    if not attachments:
+        return question
+    blocks, renders = [], 0
+    for a in attachments:
+        if a["kind"] == "step":
+            lines = [f"{s['handle']}: {'×'.join(f'{d:.0f}' for d in s['dims'])} mm, volume {s['volume'] / 1000:,.1f} cm³"
+                     for s in a["shapes"]]
+            blocks.append({"type": "text", "text": f"Attached STEP file {a['name']}, {len(lines)} solid(s):\n"
+                                                   + "\n".join(lines)})
+            for shape in a["shapes"]:
+                if renders < MAX_SHAPE_RENDERS:
+                    renders += 1
+                    blocks.append({"type": "text", "text": f"{shape['handle']} (iso view):"})
+                    blocks.append(_image("image/png", open(shape["render"], "rb").read()))
+        elif a["kind"] == "image":
+            blocks += [{"type": "text", "text": f"Attached image {a['name']}:"}, _image(a["media_type"], a["data"])]
+        elif a["kind"] == "pdf":
+            blocks.append({"type": "document", "title": a["name"], "source": {
+                "type": "base64", "media_type": "application/pdf", "data": base64.b64encode(a["data"]).decode()}})
+        else:
+            blocks.append({"type": "document", "title": a["name"],
+                           "source": {"type": "text", "media_type": "text/plain", "data": a["text"]}})
+    return blocks + [{"type": "text", "text": question}]
+
+
+def _image(media_type, data):
+    return {"type": "image", "source": {"type": "base64", "media_type": media_type,
+                                        "data": base64.b64encode(data).decode()}}
+
+
+def _is_question(message):
+    return message["role"] == "user" and (isinstance(message["content"], str) or not any(
+        isinstance(b, dict) and b.get("type") == "tool_result" for b in message["content"]))
+
+
 def _compact(history):
     """Stub out tool results before the last KEEP_TURNS questions once they pass HISTORY_CHARS.
 
-    A question is a user message with text content; tool results come in list content.
+    Attachments are kept: the engineer's own files, and the question may still be about them.
     Changes the cached prefix, so it runs rarely: only past the budget.
     """
     results = [(i, j) for i, m in enumerate(history) if isinstance(m["content"], list)
                for j, b in enumerate(m["content"]) if isinstance(b, dict) and b.get("type") == "tool_result"]
     if sum(len(history[i]["content"][j]["content"]) for i, j in results) <= HISTORY_CHARS:
         return history
-    questions = [i for i, m in enumerate(history) if m["role"] == "user" and isinstance(m["content"], str)]
+    questions = [i for i, m in enumerate(history) if _is_question(m)]
     cut = questions[-KEEP_TURNS] if len(questions) >= KEEP_TURNS else 0
     history = list(history)
     for i in sorted({i for i, _ in results if i < cut}):
@@ -148,13 +199,16 @@ def _compact(history):
     return history
 
 
-async def ask_async(question, user="normal", client=None, verbose=False, on_event=None, history=None, seen=()):
+async def ask_async(question, user="normal", client=None, verbose=False, on_event=None, history=None, seen=(),
+                    attachments=(), shapes=None):
     """-> {"answer", "trace", "calls", "rounds", "usage", "stop_reason", "seconds", "repaired", "unverified_ids",
            "messages", "seen"}.
 
     trace: one entry per tool call; calls: one per LLM request (seconds, output tokens).
     history, seen: the previous result's "messages" and "seen" to continue that conversation (same user only:
         the transcript holds what that user's tools returned). A refused question leaves them unchanged.
+    attachments: files sent with this question (_content). shapes: every attached solid of the conversation so
+        far, handle -> {"views", "size"}, for similar_parts (src.qa.tools.Tools).
     on_event(kind, info): progress for a UI, called on the caller's event loop as it happens:
         "request" {round, kind}               an LLM request starts (kind: plan | id_repair)
         "tool"    {round, tool, input}        a tool call starts
@@ -163,11 +217,14 @@ async def ask_async(question, user="normal", client=None, verbose=False, on_even
     emit = on_event or (lambda kind, info: None)
     client = client or anthropic.AsyncAnthropic()
     loop = asyncio.get_running_loop()
-    tools = await loop.run_in_executor(_tool_thread, Tools, user)
+    tools = await loop.run_in_executor(_tool_thread, Tools, user, shapes)
     history = _compact(history or [])
-    messages = history + [{"role": "user", "content": question}]
+    messages = history + [{"role": "user", "content": _content(question, attachments)}]
     trace, calls, usage = [], [], {}
     seen = set(seen) | set(ID.findall(question))  # ids the answer may cite: questions' and every tool result's
+    for a in attachments:  # and those in an attached text file: the engineer's own (a PDF's text isn't read here)
+        if a["kind"] == "text":
+            seen.update(ID.findall(a["text"]))
     start = time.perf_counter()
 
     async def request(tools_off, kind):
