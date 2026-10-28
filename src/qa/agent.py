@@ -11,6 +11,13 @@ After the answer, every part number and report id in it is checked against
 the tool results; an unknown id triggers one rewrite with tools off, and any
 that survive are returned as `unverified_ids`.
 
+A conversation continues by passing the previous result's `messages` and `seen`
+back in: the whole transcript, tool results included, so a follow-up ("which of
+those are steel?") can reuse what was already read. The request is cached
+automatically, so earlier turns are read from the cache. Once the old tool
+results grow past HISTORY_CHARS, those before the last KEEP_TURNS questions
+are replaced by a stub.
+
 Every call is traced (tool, input, size of result, seconds; each LLM request's
 seconds and output tokens) for step 8: routing can be scored separately from the answer.
 ask_many() runs a whole question set concurrently for evaluation.
@@ -39,6 +46,9 @@ MODEL = "claude-opus-5-5"
 EFFORT = "medium"
 MAX_ROUNDS = 4
 MAX_TOKENS = 16000
+HISTORY_CHARS = 200_000  # tool result text kept from earlier questions, ~60k tokens
+KEEP_TURNS = 2  # questions whose tool results survive compaction
+OMITTED = "[earlier result omitted; call the tool again if it's needed]"
 # part numbers, test report and change-notice ids, as src.qa.plm writes them
 ID = re.compile(r"\b(?:TR|ECO)-\d{6}\b|\b[A-Z]{2}-\d{5}\b")
 REPAIR = ("Automatic check: these ids in your answer appear in no tool result: {ids}. Rewrite the whole answer using "
@@ -55,6 +65,7 @@ Searching well:
 - Materials: AL6061-T6 (aluminum), ADC12 (die-cast aluminum), SPCC and SPFH590 (steel sheet), S45C (carbon steel), SUS304 (stainless), PA66-GF30, PP-T20, ABS (plastics).
 - Test types: fatigue (durability), salt_spray, heat_aging, cold_impact, vibration, wear, static, dimensional, nvh.
 - You have at most 4 rounds of tool calls. Make independent calls in parallel within one round.
+- Follow-up questions may refer to earlier answers. Reuse earlier tool results when they already answer it; otherwise call the tools again.
 
 Answering:
 - Answer in the language of the question. Lead with the answer, then the evidence; keep it short.
@@ -118,10 +129,32 @@ TOOLS = [
 _tool_thread = ThreadPoolExecutor(max_workers=1)
 
 
-async def ask_async(question, user="normal", client=None, verbose=False, on_event=None):
-    """-> {"answer", "trace", "calls", "rounds", "usage", "stop_reason", "seconds", "repaired", "unverified_ids"}.
+def _compact(history):
+    """Stub out tool results before the last KEEP_TURNS questions once they pass HISTORY_CHARS.
+
+    A question is a user message with text content; tool results come in list content.
+    Changes the cached prefix, so it runs rarely: only past the budget.
+    """
+    results = [(i, j) for i, m in enumerate(history) if isinstance(m["content"], list)
+               for j, b in enumerate(m["content"]) if isinstance(b, dict) and b.get("type") == "tool_result"]
+    if sum(len(history[i]["content"][j]["content"]) for i, j in results) <= HISTORY_CHARS:
+        return history
+    questions = [i for i, m in enumerate(history) if m["role"] == "user" and isinstance(m["content"], str)]
+    cut = questions[-KEEP_TURNS] if len(questions) >= KEEP_TURNS else 0
+    history = list(history)
+    for i in sorted({i for i, _ in results if i < cut}):
+        history[i] = {"role": "user", "content": [
+            {**b, "content": OMITTED} if b.get("type") == "tool_result" else b for b in history[i]["content"]]}
+    return history
+
+
+async def ask_async(question, user="normal", client=None, verbose=False, on_event=None, history=None, seen=()):
+    """-> {"answer", "trace", "calls", "rounds", "usage", "stop_reason", "seconds", "repaired", "unverified_ids",
+           "messages", "seen"}.
 
     trace: one entry per tool call; calls: one per LLM request (seconds, output tokens).
+    history, seen: the previous result's "messages" and "seen" to continue that conversation (same user only:
+        the transcript holds what that user's tools returned). A refused question leaves them unchanged.
     on_event(kind, info): progress for a UI, called on the caller's event loop as it happens:
         "request" {round, kind}               an LLM request starts (kind: plan | id_repair)
         "tool"    {round, tool, input}        a tool call starts
@@ -131,9 +164,10 @@ async def ask_async(question, user="normal", client=None, verbose=False, on_even
     client = client or anthropic.AsyncAnthropic()
     loop = asyncio.get_running_loop()
     tools = await loop.run_in_executor(_tool_thread, Tools, user)
-    messages = [{"role": "user", "content": question}]
+    history = _compact(history or [])
+    messages = history + [{"role": "user", "content": question}]
     trace, calls, usage = [], [], {}
-    seen = set(ID.findall(question))  # ids the answer may cite: the question's and every tool result's
+    seen = set(seen) | set(ID.findall(question))  # ids the answer may cite: questions' and every tool result's
     start = time.perf_counter()
 
     async def request(tools_off, kind):
@@ -156,15 +190,15 @@ async def ask_async(question, user="normal", client=None, verbose=False, on_even
             messages.append({"role": "assistant", "content": response.content})  # thinking blocks included, unedited
         return response
 
-    def result(answer, response, **extra):
+    def result(answer, response, messages=messages, **extra):
         return {"answer": answer, "trace": trace, "calls": calls, "rounds": len({c["round"] for c in trace}),
                 "usage": usage, "stop_reason": response.stop_reason,
-                "seconds": round(time.perf_counter() - start, 1), **extra}
+                "seconds": round(time.perf_counter() - start, 1), "messages": messages, "seen": seen, **extra}
 
     for round_ in range(MAX_ROUNDS + 1):
         response = await request(tools_off=round_ == MAX_ROUNDS, kind="plan")  # out of rounds: answer now
         if response.stop_reason == "refusal":
-            return result("The request was declined.", response, repaired=False, unverified_ids=[])
+            return result("The request was declined.", response, history, repaired=False, unverified_ids=[])
         uses = [b for b in response.content if b.type == "tool_use"]
         if response.stop_reason != "tool_use" or not uses:
             break
@@ -184,6 +218,9 @@ async def ask_async(question, user="normal", client=None, verbose=False, on_even
                             **({"is_error": True} if is_error else {})})
         messages.append({"role": "user", "content": results})  # all results of a round in one message
     answer = "".join(b.text for b in response.content if b.type == "text")
+    if uses:  # cut off mid tool call (max_tokens): a tool_use without its result would break the next turn
+        messages[-1] = {"role": "assistant", "content": [b for b in response.content if b.type != "tool_use"]
+                        + ([] if answer else [{"type": "text", "text": "(answer cut off)"}])}
 
     # Id post-check: a part number or report id no tool returned is a copying slip or an invention.
     unverified = sorted(set(ID.findall(answer)) - seen)
@@ -194,9 +231,13 @@ async def ask_async(question, user="normal", client=None, verbose=False, on_even
     messages.append({"role": "user", "content": REPAIR.format(ids=", ".join(unverified))})
     fixed = await request(tools_off=True, kind="id_repair")
     if fixed.stop_reason == "refusal":
-        return result(answer, response, repaired=False, unverified_ids=unverified)
+        return result(answer, response, messages[:-1], repaired=False, unverified_ids=unverified)
     answer = "".join(b.text for b in fixed.content if b.type == "text")
-    return result(answer, fixed, repaired=True, unverified_ids=sorted(set(ID.findall(answer)) - seen))
+    # The transcript keeps the corrected answer in place of the wrong one and the check message. Its thinking
+    # was about the check, so it is left out (thinking from finished turns may be omitted).
+    kept = messages[:-3] + [{"role": "assistant", "content": [b for b in fixed.content
+                                                            if b.type not in ("thinking", "redacted_thinking")]}]
+    return result(answer, fixed, kept, repaired=True, unverified_ids=sorted(set(ID.findall(answer)) - seen))
 
 
 async def ask_many(items, concurrency=8):

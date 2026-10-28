@@ -50,6 +50,7 @@ def visible_parts(user):
 
 def user_changed():
     st.session_state.pop("chat", None)  # an answer shown to admin must not stay on screen for normal
+    st.session_state.pop("convo", None)  # nor in the agent's context
 
 
 cad = resources.cad()  # first: it starts loading in its own process without waiting

@@ -1,8 +1,10 @@
 """Ask page: the step 6 agent, with its tool calls shown as they happen and the cited parts as tiles.
 
-Each question is answered on its own (the agent keeps no conversation); the chat
-is cleared when the user changes, so nothing seen as admin stays on screen.
-Another page can hand over a question in st.session_state.ask_prefill; it runs at once.
+The chat is one conversation: each question goes to the agent with the transcript
+so far (st.session_state.convo), so follow-ups can refer to earlier answers.
+It is cleared when the user changes, so nothing seen as admin stays on screen or
+in the agent's context. Another page can hand over a question in
+st.session_state.ask_prefill; it runs at once, in a new conversation.
 """
 import asyncio
 import re
@@ -25,6 +27,11 @@ EXAMPLES = (
 
 def ask(question):
     st.session_state.ask_prefill = question
+
+
+def new_chat():
+    st.session_state.pop("chat", None)
+    st.session_state.pop("convo", None)
 
 
 def describe(tool, args):
@@ -84,7 +91,7 @@ def show_answer(out, user):
                + (" · ids corrected by the post-check" if out["repaired"] else ""))
 
 
-def run(question, user):
+def run(question, user, convo):
     status = st.status("Claude is planning which records to read…", expanded=True)
     done = []
 
@@ -102,19 +109,27 @@ def run(question, user):
 
     try:
         out = asyncio.run(agent.ask_async(question, user, anthropic.AsyncAnthropic(max_retries=3),
-                                          on_event=on_event))
+                                          on_event=on_event, history=convo["messages"], seen=convo["seen"]))
     except anthropic.APIError as e:
         status.update(label="Failed", state="error")
         return {"error": f"The model API failed: {type(e).__name__}: {e}"}
     status.update(label=f"Answered in {out['seconds']} s · {plural(len(out['trace']), 'tool call')}",
                   state="complete", expanded=False)
+    convo["messages"], convo["seen"] = out.pop("messages"), out.pop("seen")
     return out
 
 
 user = st.session_state.user
+prefill = st.session_state.pop("ask_prefill", None)
+if prefill:  # a handoff or an example starts a new topic
+    new_chat()
 chat = st.session_state.setdefault("chat", [])
-st.caption("Answers come only from records this user may see, with every fact cited. "
-           "Each question is answered on its own.")
+convo = st.session_state.setdefault("convo", {"messages": [], "seen": set()})
+left, right = st.columns([5, 1], vertical_alignment="center")
+left.caption("Answers come only from records this user may see, with every fact cited. "
+             "Follow-up questions can refer to earlier answers.")
+if chat:
+    right.button("New chat", icon=":material/add_comment:", on_click=new_chat, width="stretch")
 
 for msg in chat:
     with st.chat_message(msg["role"]):
@@ -128,7 +143,7 @@ for msg in chat:
             show_answer(msg["out"], user)
 
 typed = st.chat_input("Ask about parts, tests and changes…")  # always drawn, or it vanishes during a prefill
-question = st.session_state.pop("ask_prefill", None) or typed
+question = prefill or typed
 
 if not chat and not question:  # not while answering: a click would stop the run and lose the answer
     st.caption("Try:")
@@ -142,7 +157,7 @@ if question:
         st.markdown(question)
     widgets.scroll_to_last_message(len(chat))
     with st.chat_message("assistant"):
-        out = run(question, user)
+        out = run(question, user, convo)
         show_answer(out, user)
     chat += [{"role": "user", "content": question}, {"role": "assistant", "out": out}]
     # Redraw in the history layout now. Otherwise this run's elements (live status, answer) stay on the page,

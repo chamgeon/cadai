@@ -262,6 +262,7 @@ Medium is already sub-pixel at the model's 224 px. Fine used 71% of storage and 
 **What was built**
 - `src/ui/`: `app.py` (sidebar: user = programs, index status), pages `views/search.py`, `part.py`, `ask.py`, `upload.py`; `data.py` (reads, permission first), `widgets.py`, `resources.py` (models loaded once), `cadworker.py`.
 - Search: hybrid text search grouped by part, filters, EN/KO. Part: renders, PLM record, tests / ECOs / revisions / geometry, similar parts + size filter, 3D view. Ask: the agent with live tool progress and cited parts as tiles. Upload: STEP → renders → similar existing parts → "Ask about these parts".
+- Multi-turn Ask: `agent.ask_async(history=, seen=)` continues a conversation with the full transcript (tool results included); the page keeps it in `session_state.convo`, "New chat" clears it, a handoff or example starts a new one.
 - Step 6 code touched: `agent.ask_async(on_event=)` progress hook; `Tools.similar_parts` split into `similar_to(views, size)` (output identical, checked); BGE-M3 fp16 for queries.
 
 **Decisions**
@@ -269,6 +270,7 @@ Medium is already sub-pixel at the model's 224 px. Fine used 71% of storage and 
 - **Extract / mesh / render run in a child process:** VTK's Cocoa window aborts the process when created off the main thread, and Streamlit runs scripts off it. Its renders are pixel-identical to the pipeline's.
 - **An upload is a question, not an ingest:** nothing is written to SQLite or Qdrant; similarity ≥ 0.97 is flagged as "existing part, reuse it?".
 - **All model calls on the agent's single tool thread;** models warmed on startup (incl. a 6-image DINOv2 batch).
+- **Multi-turn = full transcript, not Q + answer text:** follow-ups mostly point at the last turn's data ("of those three…"), so keeping tool results lets Claude answer without calling tools again; automatic caching reads earlier turns from cache. Cited ids (`seen`) carry over or the id check flags follow-ups. An id repair keeps only the corrected answer; a refused or failed turn is dropped. Past 200k chars of old tool results, those before the last 2 questions become a stub.
 - **Demo hardening:** server bound to localhost (the app spends the API key), HF offline, model-viewer + lighting served from `src/ui/static` (no network).
 
 **What broke → fix**
@@ -283,8 +285,13 @@ Medium is already sub-pixel at the model's 224 px. Fine used 71% of storage and 
 - Cold start ~20 s (models 12–14 s); Search 0.4–0.5 s; Part < 0.5 s; Upload ~1 s (extract 0.15, mesh 0.03, render 0.17, embed 0.6 s); Ask 5–18 s, of which tools ~0.2 s: the latency is the LLM.
 - Memory: Streamlit 3.15 GB at start, 4.2 GB after use; CAD worker 0.29 GB; Qdrant 0.44 GB.
 
+**For step 8 (measure)**
+- Multi-turn cases (~5, two turns each, run with `ask_async(history=, seen=)`): a pointer back ("of those three…"), "show the rest" after a grouped answer, a language switch (EN → KO), a follow-up that must call tools again (new fact not in the earlier results), and a user switch (new user = no history; must not answer from the other user's results).
+- Score turn 2 on its own: answer correct, tool calls made (0 when history suffices, > 0 when not), cited ids valid, repair rate not higher than single-turn.
+- Cost per turn: cache read vs. fresh input tokens; check compaction (past 200k chars) once with a long conversation.
+
 **Open issues**
-1. **No multi-turn chat:** each question is answered on its own; the agent keeps no conversation memory within the session.
+1. ~~No multi-turn chat~~ → done (3-turn check: turn 3 "그 부품 재질 다시 알려줘" answered from history, 0 tool calls, 2.3 s). Eval cases: see "For step 8" above.
 2. **Upload is not part of the chat:** a STEP can only be dropped on the Upload page, and its chat handoff is one canned question. Expected: attach a file in the chat box and ask about it.
 3. **Page title "cadai · part search"** (`app.py`) → rename.
 4. Pipeline glbs written without normals (step 2 bug); UI works around it. Fix: `include_normals=True` + rewrite the glb files only, no `MESH_VER` bump.
