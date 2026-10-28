@@ -1,0 +1,231 @@
+[
+ {
+  "id": "hard-01",
+  "kind": "list",
+  "lang": "en",
+  "user": "normal",
+  "question": "Which brackets changed material between revisions? From what to what, and why?",
+  "tools": [
+   "search_notes",
+   "lookup_part"
+  ],
+  "gold": {
+   "parts": [
+    "BR-32787",
+    "BR-43365",
+    "BR-76459"
+   ],
+   "ids": [
+    "ECO-143744",
+    "ECO-803381",
+    "ECO-431230"
+   ]
+  }
+ },
+ {
+  "id": "hard-02",
+  "kind": "rates",
+  "lang": "en",
+  "user": "normal",
+  "question": "Do 6061 aluminum brackets fail durability (fatigue) testing more often than SPCC brackets? Give the failure rate for each.",
+  "tools": [
+   "query_parts"
+  ],
+  "gold": {
+   "rates": [
+    [
+     14,
+     42
+    ],
+    [
+     8,
+     50
+    ]
+   ],
+   "rates_alt": [
+    [
+     14,
+     65
+    ],
+    [
+     8,
+     63
+    ]
+   ]
+  }
+ },
+ {
+  "id": "hard-03",
+  "kind": "rates",
+  "lang": "ko",
+  "user": "normal",
+  "question": "6061 알루미늄 브래킷이 SPCC 브래킷보다 내구(피로) 시험 불합격률이 높아? 각각 불합격률 알려줘.",
+  "tools": [
+   "query_parts"
+  ],
+  "gold": {
+   "rates": [
+    [
+     14,
+     42
+    ],
+    [
+     8,
+     50
+    ]
+   ],
+   "rates_alt": [
+    [
+     14,
+     65
+    ],
+    [
+     8,
+     63
+    ]
+   ]
+  }
+ },
+ {
+  "id": "hard-04",
+  "kind": "lookup",
+  "lang": "en",
+  "user": "normal",
+  "question": "Across our parts, what fixes were used for salt spray failures, and how many parts got each kind of fix? Which was most common?",
+  "tools": [
+   "search_notes"
+  ],
+  "gold": {
+   "fields": [
+    "zinc"
+   ],
+   "numbers": [
+    16,
+    9,
+    2
+   ],
+   "fix_counts": {
+    "zinc-nickel coating added": 16,
+    "insulating washer added": 9,
+    "material changed to SUS304": 2
+   }
+  }
+ },
+ {
+  "id": "hard-05",
+  "kind": "lookup",
+  "lang": "en",
+  "user": "normal",
+  "question": "Which released 6061 aluminum bracket is the heaviest, and who supplies it, at what lead time and unit cost?",
+  "tools": [
+   "query_parts"
+  ],
+  "gold": {
+   "fields": [
+    "BR-50223",
+    "Supplier 03"
+   ],
+   "numbers": [
+    4,
+    1105760
+   ]
+  }
+ },
+ {
+  "id": "hard-06",
+  "kind": "lookup",
+  "lang": "ko",
+  "user": "normal",
+  "question": "양산 승인된 6061 알루미늄 브래킷 중 가장 무거운 건 뭐고, 공급사·리드타임·단가는?",
+  "tools": [
+   "query_parts"
+  ],
+  "gold": {
+   "fields": [
+    "BR-50223",
+    "Supplier 03"
+   ],
+   "numbers": [
+    4,
+    1105760
+   ]
+  }
+ },
+ {
+  "id": "hard-07",
+  "kind": "lookup",
+  "lang": "en",
+  "user": "normal",
+  "question": "Did any part that looks like BR-66254 fail fatigue testing? For the ones that were fixed and are released now, who is the supplier?",
+  "tools": [
+   "similar_parts"
+  ],
+  "gold": {
+   "fields": [
+    "BR-19198",
+    "Supplier 04"
+   ]
+  }
+ },
+ {
+  "id": "hard-08",
+  "kind": "lookup",
+  "lang": "ko",
+  "user": "normal",
+  "question": "BR-66254랑 비슷하게 생긴 부품 중 피로 시험 불합격한 게 있어? 그중 수정돼서 양산 승인된 부품의 공급사는?",
+  "tools": [
+   "similar_parts"
+  ],
+  "gold": {
+   "fields": [
+    "BR-19198",
+    "Supplier 04"
+   ]
+  }
+ },
+ {
+  "id": "hard-09",
+  "kind": "conclusion",
+  "lang": "en",
+  "user": "normal",
+  "question": "Has any fix failed? I mean a part that was revised to fix a failed test but still fails that same test on the new revision.",
+  "tools": [
+   "query_parts",
+   "search_notes",
+   "lookup_part"
+  ],
+  "gold": {
+   "parts": [
+    "BD-29472",
+    "BD-96199",
+    "BM-57276",
+    "BM-69546"
+   ],
+   "criterion": "Does the answer say yes, and is every part it presents as a failed fix one of the parts in the truth? Naming only some of them is fine; saying none, or naming another part, is not.",
+   "reference": "Yes, 4 parts: BD-96199 (static: rev A failed, fixed in rev B [ECO-400645], rev B failed again); BM-69546 (static: rev A failed, fixed in rev B [ECO-630599], rev B failed again); BM-57276 (fatigue: rev A failed, fixed in rev B [ECO-918552], rev B failed again); BD-29472 (dimensional: rev A failed, fixed in rev B [ECO-761493], rev B failed again). All were fixed again on the next revision."
+  }
+ },
+ {
+  "id": "hard-10",
+  "kind": "similar",
+  "lang": "en",
+  "user": "normal",
+  "question": "I'd like to reuse an existing part instead of making BR-66254. Is there anything similar in shape, within 1.5x its size, whose current revision passed fatigue testing?",
+  "tools": [
+   "similar_parts"
+  ],
+  "gold": {
+   "parts": [
+    "BR-40343",
+    "PL-10187",
+    "BR-43038",
+    "BR-24601",
+    "PL-16849",
+    "BR-98978",
+    "PL-59262",
+    "PN-33910",
+    "BR-36058"
+   ]
+  }
+ }
+]

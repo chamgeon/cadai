@@ -25,9 +25,10 @@ Every call is traced (tool, input, size of result, seconds; each LLM request's
 seconds and output tokens) for step 8: routing can be scored separately from the answer.
 ask_many() runs a whole question set concurrently for evaluation.
 
-Requests use Claude Opus 5.5 at effort medium, with server-side refusal fallback
-(`fallbacks="default"`): a safety-classifier decline is retried on another
-model inside the same call instead of coming back as a refusal.
+Requests use Claude Opus 5.5 at effort low (step 8: as accurate as medium at half
+the cost and time), with server-side refusal fallback (`fallbacks="default"`): a
+safety-classifier decline is retried on another model inside the same call
+instead of coming back as a refusal.
 
 Usage:
     python -m src.qa.agent "Has a part like BR-66254 ever failed, and how was it fixed?" [--user normal]
@@ -47,7 +48,7 @@ from src.qa.plm import USERS
 from src.qa.tools import GROUP_BY, Tools
 
 MODEL = "claude-opus-5-5"
-EFFORT = "medium"
+EFFORT = "low"
 MAX_ROUNDS = 4
 MAX_TOKENS = 16000
 HISTORY_CHARS = 200_000  # tool result text kept from earlier questions, ~60k tokens
@@ -55,6 +56,8 @@ KEEP_TURNS = 2  # questions whose tool results survive compaction
 OMITTED = "[earlier result omitted; call the tool again if it's needed]"
 # part numbers, test report and change-notice ids, as src.qa.plm writes them
 ID = re.compile(r"\b(?:TR|ECO)-\d{6}\b|\b[A-Z]{2}-\d{5}\b")
+OUT_OF_ROUNDS = ("[Tool rounds are used up; answer now from these results. If they don't fully answer the question, "
+                 "say so: what you found, what is missing, how to narrow the question.]")
 REPAIR = ("Automatic check: these ids in your answer appear in no tool result: {ids}. Rewrite the whole answer using "
           "only ids the tools returned, correcting or dropping the others. Don't mention this check.")
 
@@ -65,17 +68,17 @@ The tools only return what this engineer is allowed to see. If the tools find no
 Searching well:
 - Put hard facts into tool filters, not only into the query text: result (fail, conditional, pass), test_type, material, part_class. Text search ignores negation: "no crack" looks like "crack".
 - search_notes: give `keywords` with 2-4 synonyms per key term in both English and Korean (crack: crack, fracture, 균열, 크랙, 파단) and the material code when a material is named.
-- Counting or listing by fields: query_parts. A named part: lookup_part. Parts that look like a given part: similar_parts, then read their history with search_notes (part_nos) or lookup_part.
+- Counting or listing by fields: query_parts. A named part: lookup_part. What was done after failed tests (which fixes, did the retest pass, what is still open), across many parts: fix_history; read the kind of fix from each reason. Parts that look like a given part: similar_parts, then read their history with search_notes (part_nos) or lookup_part.
 - Materials: AL6061-T6 (aluminum), ADC12 (die-cast aluminum), SPCC and SPFH590 (steel sheet), S45C (carbon steel), SUS304 (stainless), PA66-GF30, PP-T20, ABS (plastics).
 - Test types: fatigue (durability), salt_spray, heat_aging, cold_impact, vibration, wear, static, dimensional, nvh.
-- You have at most 4 rounds of tool calls. Make independent calls in parallel within one round.
+- You have at most 4 rounds of tool calls. Make independent calls in parallel within one round. If the rounds run out before the question is answered, say so plainly: give what you found, what is still missing and how the engineer could narrow the question. Never leave the answer empty.
 - Attached STEP files: each solid has a handle (NEW-1, NEW-2…), no part number and no records. To find existing parts that look like it, call similar_parts with the handle. Its render is attached so you can see it.
 - Attached images and documents come from the engineer, not the database: use them as context, but cite only database ids as evidence.
 - Follow-up questions may refer to earlier answers. Reuse earlier tool results when they already answer it; otherwise call the tools again.
 
 Answering:
 - Answer in the language of the question. Lead with the answer, then the evidence; keep it short.
-- Cite every fact with the part number and the report or change-notice id in brackets, e.g. BR-19198 [TR-381830]. Cite only ids a tool returned, copied exactly.
+- Cite every fact with the part number and the report or change-notice id in brackets: <part number> [<report id>]. Cite only ids a tool returned, copied exactly. Never write a made-up id, not even as an example: describe the format in words.
 - When many parts match, give the count, group them (by class, status or revision), name at most 10 as examples, and offer the full list.
 - Say which revision a result belongs to when it matters: a rev A failure fixed in rev B is not an open problem."""
 
@@ -101,7 +104,8 @@ def _tool(name, description, properties):
 TOOLS = [
     _tool("lookup_part", "One part's full record: card (class, material, mass, status, size, supplier, revisions), "
           "every test report note and every change notice.",
-          {"part_no": {"type": "string", "description": "e.g. BR-19198"}}),
+          # the format, not an example: a real-looking id here gets copied into greetings, then fails the id check
+          {"part_no": {"type": "string", "description": "two capital letters, a dash and five digits"}}),
     _tool("query_parts", "Count, list or group parts (latest revision) by fields. Size is the longest bounding-box "
           "side in mm, measured from the CAD geometry. test_type/result match parts having such a test report.",
           {"aggregate": {"type": "string", "enum": ["count", "list", "group"]},
@@ -122,6 +126,13 @@ TOOLS = [
            "material": _opt("string", enum=MATERIALS), "part_class": _opt("string", enum=CLASSES),
            "part_nos": _opt("array", items={"type": "string"}),
            "limit": {"type": "integer", "description": "1-20"}}),
+    _tool("fix_history", "Every failed test matching the filters (all of them, not a top 20), with the change notice "
+          "issued from that revision (id, new revision, reason as free text) and the same test's result on the new "
+          "revision, plus counts: with a change notice, retest pass / conditional / fail, none yet (open).",
+          # "any" instead of nullable: strict tools allow 16 union-typed parameters in all, the others use 15
+          {"test_type": {"type": "string", "enum": ["any", *TEST_TYPES]},
+           "part_class": {"type": "string", "enum": ["any", *CLASSES]},
+           "material": {"type": "string", "enum": ["any", *MATERIALS]}}),
     _tool("similar_parts", "Parts whose shape looks like the given part (6-view image similarity from CAD renders), "
           "with each one's test result counts. Similarity ignores size; max_size_ratio keeps parts within that "
           "factor of the query's size.",
@@ -200,7 +211,7 @@ def _compact(history):
 
 
 async def ask_async(question, user="normal", client=None, verbose=False, on_event=None, history=None, seen=(),
-                    attachments=(), shapes=None):
+                    attachments=(), shapes=None, model=MODEL, effort=EFFORT):
     """-> {"answer", "trace", "calls", "rounds", "usage", "stop_reason", "seconds", "repaired", "unverified_ids",
            "messages", "seen"}.
 
@@ -209,6 +220,7 @@ async def ask_async(question, user="normal", client=None, verbose=False, on_even
         the transcript holds what that user's tools returned). A refused question leaves them unchanged.
     attachments: files sent with this question (_content). shapes: every attached solid of the conversation so
         far, handle -> {"views", "size"}, for similar_parts (src.qa.tools.Tools).
+    model, effort: the app uses the defaults; step 8 compares others (a conversation stays on one model).
     on_event(kind, info): progress for a UI, called on the caller's event loop as it happens:
         "request" {round, kind}               an LLM request starts (kind: plan | id_repair)
         "tool"    {round, tool, input}        a tool call starts
@@ -231,9 +243,9 @@ async def ask_async(question, user="normal", client=None, verbose=False, on_even
         emit("request", {"round": len(calls) + 1, "kind": kind})
         t = time.perf_counter()
         response = await client.beta.messages.create(
-            model=MODEL, max_tokens=MAX_TOKENS, system=SYSTEM, tools=TOOLS, messages=messages,
+            model=model, max_tokens=MAX_TOKENS, system=SYSTEM, tools=TOOLS, messages=messages,
             tool_choice={"type": "none"} if tools_off else {"type": "auto"},
-            output_config={"effort": EFFORT},
+            output_config={"effort": effort},
             cache_control={"type": "ephemeral"},
             betas=["server-side-fallback-2026-07-01"], fallbacks="default",
         )
@@ -273,6 +285,8 @@ async def ask_async(question, user="normal", client=None, verbose=False, on_even
                       f"{'  ERROR ' + text if is_error else ''}")
             results.append({"type": "tool_result", "tool_use_id": call.id, "content": text,
                             **({"is_error": True} if is_error else {})})
+        if round_ == MAX_ROUNDS - 1:  # the next request has tools switched off: say so, after the results
+            results.append({"type": "text", "text": OUT_OF_ROUNDS})
         messages.append({"role": "user", "content": results})  # all results of a round in one message
     answer = "".join(b.text for b in response.content if b.type == "text")
     if uses:  # cut off mid tool call (max_tokens): a tool_use without its result would break the next turn

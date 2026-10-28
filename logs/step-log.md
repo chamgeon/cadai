@@ -93,6 +93,8 @@ One short entry per plan step. Paths are current (`src/pipeline/` steps 1–5, `
 - Multi-turn: `ask_async(history=, seen=)` resends the full transcript (tool results included, cached) so follow-ups reuse data; cited ids carry over; repair keeps only the corrected answer; refused turn dropped; old tool results stubbed past 200k chars. 3-turn check: follow-up answered with 0 tools, 2.3 s.
 - Attachments: `ask_async(attachments=, shapes=)`. STEP solids get handles `NEW-1` that `similar_parts` accepts; images, PDF, txt/md/csv go to Claude as blocks; "attached files are context, not evidence".
 - Small talk ("hi") already works: no tools, 7–17 s.
+- (step 8) Effort medium → low; `ask_async(model=, effort=)`. Greetings copied the example id in `lookup_part`'s description (then invented `AB-12345`) → id repair every time: format in words + "never write a made-up id".
+- (step 8) `fix_history` tool: every failed test → its change notice → the retest, with counts (search caps at 20). Filters are `"any"` enums: strict tools allow 16 union-typed parameters in all. Last round announced after the tool results + prompt rule: say what was found and what is missing, never empty (forced at 1 round: 4/4 honest, was blank).
 
 **→ step 8:** gold from `facts.json`; wording unlike the templates (incl. KO); score routing / retrieval / answer / citations / leaks separately; Opus medium vs low vs Sonnet (~$4 per 60 questions); count repairs; ~5 two-turn cases (pointer back, "show the rest", EN→KO, needs new tools, user switch).
 
@@ -110,4 +112,24 @@ One short entry per plan step. Paths are current (`src/pipeline/` steps 1–5, `
 
 **Decisions:** memory first on 8 GB (BGE-M3 fp16 queries, 3D off by default); an upload is a question, not an ingest; all model calls on one tool thread; images to Claude only (no photo → render search).
 
-**Open:** full 2-minute demo run moved to after step 8 (evaluation); latency table → step 8; answer streaming; does memory plateau; a real photo / large PDF / Word files untested; tile "similarity" wraps in narrow tiles.
+**Open:** full 2-minute demo run moved to after step 8 (evaluation); answer streaming; a real photo / large PDF / Word files untested; tile "similarity" wraps in narrow tiles.
+
+## Step 8 — Evaluation (2026-10-28)
+
+**Built:** `src/eval/`: `pipeline_stats` (A), `system_bench` (D), `search_quality` + `label_search` (B, hand grading in 3 blind rounds), `qa_gold` + `qa_eval` (C, code-scored against `facts.json`). Results in `src/eval/results/`. Report: `docs/step8-evaluation-report.pdf`.
+
+**Numbers:** A 98.0% files load, 99.94% parts searchable, 0.91 s/part, 1.49× storage. D cold 22–25 s, search 0.04 s, Ask 7–17 s (LLM), 4.3 GB flat. B P@5 0.35, reusable 0. C 97–98% of 58, hard 8–10/10, 0 leaks, 0 invented ids.
+
+| Setup | Main | Hard | $/question | Median s |
+|---|---|---|---|---|
+| Opus medium | 97% | 9/10 | 0.046 | 9.2 |
+| **Opus low** | 97% | 10/10 | 0.023 | 7.5 |
+| Sonnet medium | 98% | 8/10 | 0.018 | 6.4 |
+
+**Broke → fix:** RSS 604 → 104 MB under compression → footprint (step 7's "growth" was a reading during model load); first Q&A scores 86–88% → scorer, judge and 2 gold answers wrong, found by reading every miss and by models disagreeing with the gold.
+
+**Decisions:** Opus low as default; search stays DINOv2 MaxSim (mean, 2× size, aligned views, geometry re-rank, Voyage API, class filter all ≤ baseline).
+
+**Learned:** the corpus caps search (no part families); grader repeat rate 84–91% → gaps < 0.07 are noise; an LLM judge needs the agent's evidence and one narrow question.
+
+**Open:** search is limited by the corpus (unrelated shapes, no part families): known variants or production PLM data would fix it, out of the demo's scope (time, compute, disk, cost). Blank final answer and the missing aggregate tool fixed after the report: see step 6.

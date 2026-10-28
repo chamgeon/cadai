@@ -1,0 +1,3 @@
+{"setup": "opus_low", "id": "hard-09", "correct": true, "why": "The answer says yes and names BD-29472 as its only failed fix, which is in the truth list; the other parts it mentions (BM-13492, BD-28744, BK-94250, HS-69933) are explicitly presented as fixes that held with a different test failing, not as failed fixes.", "usd": 0.003176}
+{"setup": "opus_medium", "id": "hard-09", "correct": false, "why": "The answer says no failed fix was found, while the truth is yes (4 parts), and it names none of those parts as failed fixes.", "usd": 0.003432}
+{"setup": "sonnet_medium", "id": "hard-09", "correct": false, "why": "The answer is blank, so it does not say yes and names none of the failed-fix parts.", "usd": 0.001404}

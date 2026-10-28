@@ -16,6 +16,7 @@ RAW = DATA / "raw"            # incoming STEP files; they stay here once process
 FAILED = DATA / "failed"      # dead-letter folder: error logs + STEP files of dead jobs
 MESH = DATA / "mesh"          # glTF (viewing) and STL (ML)
 RENDERS = DATA / "renders"    # renders/{part_id}/view_0..5.png
+EVAL_RESULTS = ROOT / "src" / "eval" / "results"  # small JSON, tracked in git
 
 DB_PATH = ROOT / "db" / "parts.sqlite"
 # Qdrant server in Docker (see README); storage is bind-mounted to qdrant_data/, gitignored

@@ -1,4 +1,4 @@
-"""Diagrams for docs/pipeline.pdf and docs/query-flow.pdf (drawn in inches, saved as 300 dpi PNG).
+"""Diagrams for docs/pipeline.pdf, docs/query-flow.pdf and docs/step8-evaluation-report.pdf (inches, 300 dpi PNG).
 
 Used by build_docs.py; draw(out_dir, names) writes the named figures."""
 
@@ -168,12 +168,12 @@ def query_overview():
         "+ attachments: STEP → CAD worker\n   → NEW-1 (6 views, size), ~1 s;\n   image · PDF · txt / md / csv\n"
         "+ the conversation so far", GRAY, bsize=6.3)
     box(ax, 2.65, 4.25, 4.6, 1.9, "Agent loop  (src/qa/agent.py)",
-        "Claude Opus 5.5, effort medium, adaptive thinking\n"
-        "system prompt + 4 tool schemas: identical for every user → cached\n"
+        "Claude Opus 5.5, effort low, adaptive thinking\n"
+        "system prompt + 5 tool schemas: identical for every user → cached\n"
         "messages = transcript so far + question (+ attachment blocks)\n"
         "rounds 1–4: reads all results so far, then calls tools (parallel\n"
         "                    within a round) or answers; a greeting needs no tool\n"
-        "round 5: tools switched off → must answer\n"
+        "round 5: tools off, told so → answers, says what is missing\n"
         "id post-check: an id no tool returned → one rewrite, tools off\n"
         "returns the transcript + citable ids for the next question\n"
         "refusal → server-side fallback model (fallbacks=\"default\")", PURPLE, align="left", bsize=6.4)
@@ -192,15 +192,14 @@ def query_overview():
     arrow(ax, 4.2, 4.25, 4.2, 3.4, "tool_use", loff=(0.08, -0.06), ha="left")
     arrow(ax, 5.6, 3.4, 5.6, 4.25, "tool_result (JSON)", loff=(0.08, -0.06), ha="left")
     tools = [
-        ("lookup_part", "one part's card + all its\ntest reports and change\nnotices\nuse: a named part"),
-        ("query_parts", "count / list / group by\nfields + measured size;\nfixed SQL, model gives\nonly parameters"),
-        ("search_notes", "hybrid search over cards,\ntest notes, change notices;\nexact filters + keywords\n"
-                         "use: meaning in text"),
-        ("similar_parts", "6-view MaxSim (DINOv2) for\na part number or an\nattached shape (NEW-1);\n"
-                          "visible parts only; size ratio"),
+        ("lookup_part", "one part's card + all\nits test reports and\nchange notices\nuse: a named part"),
+        ("query_parts", "count / list / group\nby fields + size;\nfixed SQL, model\ngives parameters"),
+        ("fix_history", "every failed test →\nits change notice →\nthe retest; counts\n(added after step 8)"),
+        ("search_notes", "hybrid search over\ncards, notes, change\nnotices; filters +\nkeywords (≤ 20)"),
+        ("similar_parts", "6-view MaxSim for a\npart or an attached\nshape (NEW-1);\nvisible only; size"),
     ]
     for i, (t, b) in enumerate(tools):
-        box(ax, 0.2 + i * 1.77, 1.75, 1.62, 1.1, t, b, BLUE, tsize=7.8, bsize=6.3)
+        box(ax, 0.2 + i * 1.42, 1.75, 1.32, 1.1, t, b, BLUE, tsize=7.6, bsize=6.1)
 
     box(ax, 0.05, 0.05, 3.05, 0.9, "SQLite  (read-only for tools)",
         "part_cards: the join of plm_items, erp_suppliers,\ndoc_test_reports, doc_change_notices + step 1\n"
@@ -210,7 +209,7 @@ def query_overview():
         bsize=6.3)
     box(ax, 5.55, 0.05, 1.7, 0.9, "Qdrant 'parts'", "1,625 parts, DINOv2\nmean + 6-view MaxSim\n"
         "(steps 1–5); uploads\nare never added", GRAY, bsize=6.3)
-    for x1, x2 in ((1.0, 1.0), (2.75, 2.6), (4.5, 4.3), (6.3, 6.4)):
+    for x1, x2 in ((0.86, 0.86), (2.28, 2.1), (3.7, 2.9), (5.12, 4.3), (6.54, 6.4)):
         arrow(ax, x1, 1.75, x2, 0.95, color="#7d8796", dash=True)
     save(fig, "query_overview")
 
@@ -272,12 +271,54 @@ def step_search():
         GREEN, tsize=7.4, bsize=6.2)
     arrow(ax, 5.8, 1.0, 6.05, 1.0)
     ax.text(0.05, 0.2, "One signal, not hybrid: image similarity only. Step 1's geometry numbers (volume, face types, "
-            "fill ratio) are in the payload; fusing them by RRF is a step 8 experiment.", fontsize=6.3, color=SUB,
+            "fill ratio) are in the payload; re-ranking with them did not help (step 8).", fontsize=6.3, color=SUB,
             va="top")
     save(fig, "step_search")
 
 
-FIGURES = {"pipeline": (pipeline_overview, job_states), "query": (query_overview, hybrid_search, step_search)}
+# ------------------------------------------------------------------ evaluation: what was measured where
+def eval_overview():
+    fig, ax = canvas(7.3, 3.95)
+    ax.set_ylim(0.5, 4.45)  # drawn on 0..4.45; the strip below the lowest boxes is empty
+    # the system, left to right: CAD side on top, text side below, the app on the right
+    box(ax, 0.05, 2.95, 1.0, 0.75, "STEP files", "500 ABC files\n+ my bracket", GRAY, bsize=6.3)
+    box(ax, 1.3, 2.95, 1.9, 0.75, "Pipeline  (steps 1–5)", "extract · mesh · render ·\nDINOv2 embed · index", BLUE,
+        bsize=6.3)
+    box(ax, 3.45, 2.95, 1.15, 0.75, "Qdrant 'parts'", "1,625 parts,\n6 view vectors", GRAY, bsize=6.3)
+    box(ax, 4.85, 2.95, 1.15, 0.75, "Shape search", "MaxSim,\nsize filter", BLUE, bsize=6.3)
+    box(ax, 0.05, 1.5, 1.0, 0.75, "Fake PLM", "facts.json →\nrecords, notes", GRAY, bsize=6.3)
+    box(ax, 1.3, 1.5, 1.9, 0.75, "Text index  (step 6)", "part cards + 5,475 chunks,\nBM25 + BGE-M3", GRAY, bsize=6.3)
+    box(ax, 3.45, 1.5, 2.55, 0.75, "Q&A agent  (step 6)", "Claude Opus 5.5 (effort low) + 4 tools;\n"
+        "permissions inside every tool", PURPLE, bsize=6.3)
+    box(ax, 6.25, 1.5, 1.0, 2.2, "App  (step 7)", "Streamlit\n\nSearch\nPart\nAsk", GRAY, bsize=6.3)
+    for x1, x2, y in ((1.05, 1.3, 3.325), (3.2, 3.45, 3.325), (4.6, 4.85, 3.325), (1.05, 1.3, 1.875),
+                      (3.2, 3.45, 1.875), (6.0, 6.25, 3.325), (6.0, 6.25, 1.875)):
+        arrow(ax, x1, y, x2, y)
+    arrow(ax, 5.425, 2.95, 5.425, 2.25, "similar_parts", loff=(0.06, -0.08), ha="left", lsize=5.8)
+
+    # what step 8 measured, and the headline
+    box(ax, 0.05, 3.85, 3.15, 0.55, "A  Pipeline", "98.0% of files load · 99.94% of parts searchable ·\n"
+        "0.91 s per part · output 1.49× the STEP size", AMBER, align="left", tsize=7.6, bsize=6.2)
+    box(ax, 3.45, 3.85, 2.55, 0.55, "B  Search quality", "precision@5 0.35 on 20 hand-graded queries;\n"
+        "6 other setups tried, none better; reusable: 0", GREEN, align="left", tsize=7.6, bsize=6.2)
+    box(ax, 3.45, 0.55, 2.55, 0.8, "C  Q&A", "58 questions: 97–98% correct · 10 hard: 8–10\n"
+        "0 leaks, 0 invented ids in 204 answers\n3 setups: Opus medium / low, Sonnet medium", PURPLE,
+        align="left", tsize=7.6, bsize=6.2)
+    box(ax, 6.25, 0.55, 1.0, 0.8, "D  System", "start 22–25 s\nsearch 0.04 s\nask 7–17 s\n4.3 GB, flat",
+        AMBER, align="left", tsize=7.6, bsize=6.0)
+    for x, y1, y2 in ((2.25, 3.85, 3.7), (4.0, 3.85, 3.7), (5.4, 3.85, 3.7), (4.7, 1.35, 1.5), (6.75, 1.35, 1.5)):
+        arrow(ax, x, y1, x, y2, color="#7d8796", dash=True)
+    ax.text(0.05, 1.3, "How it was graded", fontsize=7.4, weight="bold", color=INK, va="top")
+    ax.text(0.05, 1.1, "A, D  measured: the pipeline's own tables, timers,\n       memory footprint (not RSS)\n"
+            "B  graded by hand, blind, 3 rounds (repeat rate 84–91%)\n"
+            "C  checked by code against facts.json; an LLM judge\n     only for 'why' answers and one yes/no",
+            fontsize=6.2, color=SUB, va="top", linespacing=1.35)
+    save(fig, "eval_overview")
+
+
+
+FIGURES = {"pipeline": (pipeline_overview, job_states), "query": (query_overview, hybrid_search, step_search),
+           "eval": (eval_overview,)}
 
 
 def draw(out_dir, doc):

@@ -1,6 +1,7 @@
-"""Build docs/pipeline.pdf and docs/query-flow.pdf (ReportLab), figures from figures.py.
+"""Build docs/pipeline.pdf, docs/query-flow.pdf and docs/step8-evaluation-report.pdf (ReportLab), figures from
+figures.py.
 
-    python docs/src/build_docs.py [pipeline] [query]     (both when none is named)
+    python docs/src/build_docs.py [pipeline] [query] [eval]     (all when none is named)
 
 The figures are drawn into a temporary folder; only the PDFs are kept.
 """
@@ -185,6 +186,7 @@ def query_doc():
             ["lookup_part", "part number", "hidden = missing → 'not found'"],
             ["query_parts", "parameters only; the SQL is fixed", "program condition added by code"],
             ["search_notes", "query, keywords, exact filters", "filter inside each prefetch"],
+            ["fix_history", "test type, class, material ('any' = all)", "program condition added by code"],
             ["similar_parts", "part number or attached shape (NEW-1), size ratio", "only visible parts are ranked"],
         ], [0.18, 0.42, 0.4]),
 
@@ -235,11 +237,105 @@ def query_doc():
     build(OUT / "query-flow.pdf", "How a Question Is Answered", s)
 
 
+# ======================================================================= step8-evaluation-report.pdf
+def eval_doc():
+    s = [
+        p("Step 8 · Evaluation", "title"),
+        p(code("src/eval/") + " · results in " + code("src/eval/results/") + " · 2026-10-28", "sub"),
+        figure("eval_overview", "Figure 1. What was measured where, with the headline of each part.", 4.3 * inch),
+
+        p("A · Pipeline  (500 files, from the pipeline's own tables)", "h1"),
+        table([
+            ["Funnel", "Time per searchable part: 0.91 s", "Storage: 1.49× the STEP (685 MB)"],
+            ["502 files → 492 loaded (98.0%)<br/>4,613 solids → 1,626 unique (65% in-file copies)<br/>"
+             "1,626 → 1,625 searchable (99.94%)",
+             "embed 41% (0.35 s, steady) · extract 37% (median 0.09 s, max 55 s) · render 13% · mesh 4%",
+             ".stl 0.66× (unused by search) · medium .glb 0.39× · Qdrant parts 0.22× · coarse .glb 0.12× · "
+             "renders 0.10×"],
+        ], [0.33, 0.33, 0.34]),
+
+        p("D · System  (backend timers; app memory as footprint)", "h1"),
+        table([
+            ["Cold start", "Search", "Part page", "STEP attach", "Ask (median / p95)", "Memory"],
+            ["22–25 s (models 15–17)", "0.04 s, cached 0.000", "0.04 s", "1.1 s, max 5.6",
+             "Opus medium 16.9 / 29.8 s; LLM 16.5 s, tools 0.3 s", "4.3 GB after load; +66 MB over a 2-tab "
+             "session; flat over 20 soak rounds"],
+        ], [0.15, 0.15, 0.1, 0.13, 0.25, 0.22]),
+        p("macOS RSS fell 604 → 104 MB under memory compression while the footprint stayed at 4.2 GB: memory is "
+          "read as footprint. Step 7's '3.15 → 4.2 GB growth' was a reading taken while the models were still "
+          "loading.", "cap"),
+        PageBreak(),
+
+        p("B · Similar-part search  (20 queries, 289 pairs graded 0 / 1 / 2 by hand, blind)", "h1"),
+        table([
+            ["Setup", "Similar in top 5", "vs maxsim per query (win / tie / loss)", "Round"],
+            ["<b>maxsim</b>: DINOv2, 6 views, MaxSim (the app)", "<b>0.33–0.35</b>", "—", "1, 2"],
+            ["mean: one averaged vector", "0.25", "2 / 11 / 7", "1"],
+            ["maxsim_2x: within 2× size", "0.26", "3 / 7 / 10", "1"],
+            ["aligned: view i to view i only", "0.27", "1 / 13 / 6 (CI below 0)", "1"],
+            ["maxsim_geo: re-ranked by geometry", "0.30", "3 / 9 / 8", "1"],
+            ["voyage: Voyage multimodal-3.5 (API)", "0.26", "2 / 13 / 5", "2"],
+            ["class_maxsim: same PLM class only", "0.18", "3 / 8 / 9 (CI below 0)", "3"],
+        ], [0.42, 0.16, 0.3, 0.12]),
+        bullets([
+            "<b>The real limit is the corpus.</b> 1,625 unrelated ABC shapes hold almost no part families: no pair "
+            "of 289 was graded 'could reuse', only 63 distinct similar parts turned up over 20 queries, none for "
+            "the cover and the pin. A second image model, other scoring and two filters all land near a third: "
+            "there is little to find.",
+            "<b>The fix is data:</b> known variants (e.g. parametric families of the bracket) to score reuse, or, as "
+            "in production, the full PLM with its part families. Neither fits the demo: time, compute, disk and cost.",
+            "<b>The app keeps the baseline:</b> DINOv2-base hosted locally, 6 views, MaxSim. No part image leaves "
+            "the machine; Voyage scored lower and would send renders to an outside API.",
+            "Grader repeat rate 84–91% on pairs seen twice: differences under ~0.07 are noise.",
+        ]),
+
+        p("C · Q&amp;A agent  (answers checked by code against facts.json)", "h1"),
+        table([
+            ["", "Opus 5.5 medium", "<b>Opus 5.5 low (now default)</b>", "Sonnet 5.5 medium"],
+            ["58 questions (19 Korean, 5 two-turn)", "97%", "97%", "98%"],
+            ["10 hard (2–4 dependent rounds)", "9/10", "10/10", "8/10"],
+            ["Leaks / invented ids (204 answers)", "0 / 0", "0 / 0", "0 / 0"],
+            ["Seconds, median (main / hard)", "9.2 / 18.0", "7.5 / 15.7", "6.4 / 16.6"],
+            ["$ per question (main / hard)", "0.046 / 0.118", "0.023 / 0.067", "0.018 / 0.045"],
+        ], [0.34, 0.2, 0.26, 0.2]),
+        p("Opus low over Sonnet: Sonnet's misses were on the multi-step questions; the price gap is ~$0.005–0.02 "
+          "per question. 10 hard questions decide nothing on their own.", "cap"),
+
+        p("Failures", "h1"),
+        table([
+            ["Where", "What broke", "Cause → status"],
+            ["Pipeline", "9 files no solid, 1 unloadable; 1 part with a 2-triangle mesh",
+             "data → dead job / gate 2 rejects; 30 open meshes, 10 invalid B-reps kept and flagged"],
+            ["Pipeline", "2 jobs failed with Qdrant down", "transient → retried, done"],
+            ["Search", "No reusable part found by any of 7 setups",
+             "corpus of unrelated shapes, no part families → not fixed in the demo (variants or production data: "
+             "time, compute, disk, cost)"],
+            ["Search", "aligned views worse than MaxSim",
+             "canonical pose differs between different parts; MaxSim absorbs it → kept MaxSim"],
+            ["Agent", "Greetings ran the id repair (Opus)",
+             "copied an example id from a tool description, then made one up → format in words, "
+             "rule 'never write a made-up id' → fixed"],
+            ["Agent", "Blank final answer after 4 tool rounds (Sonnet)",
+             "forced last answer came back empty → the last round is announced, the prompt asks for what was "
+             "found and what is missing → fixed (4/4 honest, forced check)"],
+            ["Tools", "Counting change notices by fix gave a lower bound",
+             "search returns ≤ 20 → fix_history (all failed tests → change notice → retest) → fixed: both "
+             "hard questions right in 1 round, Opus low and Sonnet"],
+            ["Eval", "First scores 86–88%; 2 hard-set gold answers wrong",
+             "scorer and judge too strict, gold checked only the last revision → fixed; models' disagreement "
+             "found them"],
+        ], [0.1, 0.38, 0.52]),
+    ]
+    build(OUT / "step8-evaluation-report.pdf", "Step 8 · Evaluation", s)
+
+
+DOCS = {"pipeline": (pipeline_doc, "pipeline.pdf"), "query": (query_doc, "query-flow.pdf"),
+        "eval": (eval_doc, "step8-evaluation-report.pdf")}
+
 if __name__ == "__main__":
-    docs = {"pipeline": pipeline_doc, "query": query_doc}
-    for name in sys.argv[1:] or list(docs):
+    for name in sys.argv[1:] or list(DOCS):
         with tempfile.TemporaryDirectory() as tmp:
             FIG = Path(tmp)
             figures.draw(tmp, name)
-            docs[name]()
-        print("written", OUT / ("pipeline.pdf" if name == "pipeline" else "query-flow.pdf"))
+            DOCS[name][0]()
+        print("written", OUT / DOCS[name][1])

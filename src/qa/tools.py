@@ -4,6 +4,8 @@ The LLM never writes SQL and never sees a record outside the user's programs:
     lookup_part    one part's card plus its test reports and change notices
     query_parts    count / list / group parts by fields; parameters only, the SQL is fixed here
     search_notes   hybrid search over cards, test notes and change notices (src.qa.textindex)
+    fix_history    every failed test matching the filters, the change notice that followed and the retest
+                   on the new revision: what search can't do, since it returns at most 20 documents
     similar_parts  step 4's image similarity, restricted to visible parts before ranking; also takes an
                    attached shape's handle (NEW-1), whose view vectors the UI passes in as `shapes`
 A part in another program and a part that doesn't exist get the same "not found"
@@ -22,6 +24,7 @@ from src.qa.plm import USERS
 
 GROUP_BY = ("part_class", "material", "status")
 LIST_LIMIT = 50
+FIX_LIMIT = 150  # failed tests listed by fix_history; the counts always cover all of them
 
 
 def _json(obj):
@@ -41,8 +44,8 @@ class Tools:
 
     def run(self, name, args):
         """-> (result text, is_error). Unknown tools and bad arguments come back as tool errors, not exceptions."""
-        fn = {"lookup_part": self.lookup_part, "query_parts": self.query_parts,
-              "search_notes": self.search_notes, "similar_parts": self.similar_parts}.get(name)
+        fn = {"lookup_part": self.lookup_part, "query_parts": self.query_parts, "search_notes": self.search_notes,
+              "fix_history": self.fix_history, "similar_parts": self.similar_parts}.get(name)
         if fn is None:
             return f"unknown tool {name}", True
         try:
@@ -115,6 +118,36 @@ class Tools:
         hits = textindex.search(self.qc, query, self.user, "hybrid", keywords, filters, min(limit, 20))
         keep = ("doc_id", "kind", "part_no", "rev", "lang", "header", "text")
         return {"results": [{k: h.payload.get(k) for k in keep} for h in hits]}
+
+    def fix_history(self, test_type=None, part_class=None, material=None):
+        """Failed tests -> the change notice from that revision -> the same test on the new revision.
+
+        Class and material are the failed revision's. A failure with no change notice is open (or the part is
+        still on that revision); a change notice's reason is free text, so what kind of fix it was is read there.
+        """
+        where, args = ["t.result = 'fail'", f"i.{self.in_programs}"], list(self.programs)
+        for col, value in (("t.test_type", test_type), ("i.part_class", part_class), ("i.material", material)):
+            if value not in (None, "any"):
+                where.append(f"{col} = ?")
+                args.append(value)
+        rows = self.conn.execute(
+            "SELECT t.part_no, t.rev, t.test_type, t.report_id, e.eco_id, e.to_rev, e.reason,"
+            " r.report_id AS retest_report, r.result AS retest_result"
+            " FROM doc_test_reports t JOIN plm_items i ON i.part_no = t.part_no AND i.rev = t.rev"
+            " LEFT JOIN doc_change_notices e ON e.part_no = t.part_no AND e.from_rev = t.rev"
+            " LEFT JOIN doc_test_reports r ON r.part_no = t.part_no AND r.rev = e.to_rev AND r.test_type = t.test_type"
+            f" WHERE {' AND '.join(where)} ORDER BY t.part_no, t.rev", args).fetchall()
+        items = [{k: v for k, v in dict(r).items() if v is not None} for r in rows]
+        items.sort(key=lambda x: x.get("retest_result") != "fail")  # failed fixes first: never cut off by the limit
+        counts = {"failed_tests": len(items), "with_change_notice": sum("eco_id" in x for x in items),
+                  "retest_pass": sum(x.get("retest_result") == "pass" for x in items),
+                  "retest_conditional": sum(x.get("retest_result") == "conditional" for x in items),
+                  "retest_fail": sum(x.get("retest_result") == "fail" for x in items),
+                  "no_change_notice": sum("eco_id" not in x for x in items)}
+        out = {"counts": counts, "failures": items[:FIX_LIMIT]}
+        if len(items) > FIX_LIMIT:
+            out["truncated"] = f"{len(items)} failed tests; narrow by test_type, part_class or material"
+        return out
 
     def similar_parts(self, part_no, limit=5, max_size_ratio=None):
         """Parts that look like `part_no`, among those the user may see; other solids of its own file excluded."""

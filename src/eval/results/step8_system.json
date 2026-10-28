@@ -1,0 +1,421 @@
+{
+  "memory": {
+    "after_import": {
+      "self": 514.0,
+      "children": 0,
+      "mps_driver": 0.375
+    },
+    "after_cold_start": {
+      "self": 4211.0,
+      "children": 298.2509765625,
+      "mps_driver": 2538.625
+    }
+  },
+  "cold": {
+    "imports": 7.820213375031017,
+    "cad_worker_start": 0.030578167061321437,
+    "models": 16.97553416690789,
+    "cad_worker_wait_after_models": 0.0006474170368164778,
+    "total": 24.970263833063655
+  },
+  "search": {
+    "new": {
+      "n": 20,
+      "median": 0.04410345840733498,
+      "p95": 0.47854437958449164,
+      "max": 0.9893064169446006
+    },
+    "cached": {
+      "n": 20,
+      "median": 8.710450492799282e-05,
+      "p95": 0.0001454249606467787,
+      "max": 0.0006023749010637403
+    }
+  },
+  "part": {
+    "record": {
+      "n": 20,
+      "median": 0.011242458480410278,
+      "p95": 0.014920794079080228,
+      "max": 0.02070158300921321
+    },
+    "similar": {
+      "n": 20,
+      "median": 0.03240697953151539,
+      "p95": 0.055099337542196807,
+      "max": 0.15135262510739267
+    },
+    "page": {
+      "n": 20,
+      "median": 0.044132250535767525,
+      "p95": 0.067932229168946,
+      "max": 0.17205420811660588
+    }
+  },
+  "attach": {
+    "runs": [
+      {
+        "file": "my_bracket.step",
+        "ok": true,
+        "seconds": 1.3005712919402868,
+        "stages": {
+          "extract": 0.2,
+          "mesh": 0.05,
+          "render": 0.17,
+          "embed": 0.78,
+          "similar": 0.09413437498733401
+        }
+      },
+      {
+        "file": "00002942_5f81007b84be4c60bbc04d47_step_000.step",
+        "ok": true,
+        "seconds": 1.075463791959919,
+        "stages": {
+          "extract": 0.45,
+          "mesh": 0.09,
+          "render": 0.1,
+          "embed": 0.35,
+          "similar": 0.07394979207310826
+        }
+      },
+      {
+        "file": "00006960_07fd2e60870d4ad99cafdd48_step_000.step",
+        "ok": true,
+        "seconds": 5.6097567500546575,
+        "stages": {
+          "extract": 3.61,
+          "mesh": 0.96,
+          "render": 0.42,
+          "embed": 0.51,
+          "similar": 0.1026654999004677
+        }
+      },
+      {
+        "file": "00009054_db052b5bf35a4468a55d80ee_step_000.step",
+        "ok": true,
+        "seconds": 0.5696441660402343,
+        "stages": {
+          "extract": 0.08,
+          "mesh": 0.03,
+          "render": 0.06,
+          "embed": 0.34,
+          "similar": 0.06727370794396847
+        }
+      },
+      {
+        "file": "00007855_2f7fe136bd404ef5a3155363_step_001.step",
+        "ok": true,
+        "seconds": 0.7660710000200197,
+        "stages": {
+          "extract": 0.21,
+          "mesh": 0.06,
+          "render": 0.12,
+          "embed": 0.33,
+          "similar": 0.03540295793209225
+        }
+      }
+    ],
+    "total": {
+      "n": 5,
+      "median": 1.075463791959919,
+      "p95": 4.747919658431782,
+      "max": 5.6097567500546575
+    }
+  },
+  "ask": {
+    "runs": [
+      {
+        "question": "Which aluminum parts failed durability tests?",
+        "seconds": 25.4,
+        "llm_seconds": 24.8,
+        "tool_seconds": 0.6900000000000001,
+        "n_tool_calls": 6,
+        "rounds": 2,
+        "repaired": false,
+        "output_tokens": 2651,
+        "usd": 0.123397
+      },
+      {
+        "question": "알루미늄 부품 중 피로 시험에서 불합격한 것은?",
+        "seconds": 27.0,
+        "llm_seconds": 26.5,
+        "tool_seconds": 0.5,
+        "n_tool_calls": 5,
+        "rounds": 2,
+        "repaired": false,
+        "output_tokens": 2932,
+        "usd": 0.1342736
+      },
+      {
+        "question": "What changed in the latest revision of the most recently released bracket?",
+        "seconds": 23.2,
+        "llm_seconds": 22.5,
+        "tool_seconds": 0.63,
+        "n_tool_calls": 6,
+        "rounds": 4,
+        "repaired": false,
+        "output_tokens": 1707,
+        "usd": 0.10666780000000001
+      },
+      {
+        "question": "How many parts use PA66-GF30, by status?",
+        "seconds": 6.8,
+        "llm_seconds": 6.8,
+        "tool_seconds": 0.02,
+        "n_tool_calls": 1,
+        "rounds": 1,
+        "repaired": false,
+        "output_tokens": 369,
+        "usd": 0.0241104
+      },
+      {
+        "question": "Any corrosion problems reported on steel covers?",
+        "seconds": 16.6,
+        "llm_seconds": 16.0,
+        "tool_seconds": 0.5700000000000001,
+        "n_tool_calls": 4,
+        "rounds": 2,
+        "repaired": false,
+        "output_tokens": 1648,
+        "usd": 0.06708839999999999
+      },
+      {
+        "question": "Find parts similar to the first housing you can see and tell me if any failed a test.",
+        "seconds": 14.3,
+        "llm_seconds": 14.2,
+        "tool_seconds": 0.14,
+        "n_tool_calls": 4,
+        "rounds": 3,
+        "repaired": false,
+        "output_tokens": 1260,
+        "usd": 0.0636678
+      },
+      {
+        "question": "Which supplier has the most conditional results in salt spray?",
+        "seconds": 17.1,
+        "llm_seconds": 17.0,
+        "tool_seconds": 0.02,
+        "n_tool_calls": 14,
+        "rounds": 2,
+        "repaired": false,
+        "output_tokens": 1666,
+        "usd": 0.086244
+      },
+      {
+        "question": "저온 충격 시험에서 문제가 된 플라스틱 부품 알려줘",
+        "seconds": 32.1,
+        "llm_seconds": 31.4,
+        "tool_seconds": 0.73,
+        "n_tool_calls": 9,
+        "rounds": 2,
+        "repaired": false,
+        "output_tokens": 3869,
+        "usd": 0.1241846
+      },
+      {
+        "question": "Show me released shafts heavier than 500 g.",
+        "seconds": 11.6,
+        "llm_seconds": 11.600000000000001,
+        "tool_seconds": 0.01,
+        "n_tool_calls": 1,
+        "rounds": 1,
+        "repaired": false,
+        "output_tokens": 922,
+        "usd": 0.0403404
+      },
+      {
+        "question": "hi",
+        "seconds": 5.7,
+        "llm_seconds": 5.699999999999999,
+        "tool_seconds": 0,
+        "n_tool_calls": 0,
+        "rounds": 0,
+        "repaired": true,
+        "output_tokens": 374,
+        "usd": 0.023980599999999998
+      }
+    ],
+    "total": {
+      "n": 10,
+      "median": 16.85,
+      "p95": 29.804999999999996,
+      "max": 32.1
+    },
+    "llm": {
+      "n": 10,
+      "median": 16.5,
+      "p95": 29.194999999999993,
+      "max": 31.4
+    },
+    "tools": {
+      "n": 10,
+      "median": 0.32,
+      "p95": 0.712,
+      "max": 0.73
+    },
+    "usd_per_question": 0.07939546
+  },
+  "soak": [
+    {
+      "round": 1,
+      "seconds": 27.658485583029687,
+      "usd": 0.11741539999999999,
+      "self": 4223.0,
+      "children": 332.2509765625,
+      "mps_driver": 2536.625
+    },
+    {
+      "round": 2,
+      "seconds": 29.83452437503729,
+      "usd": 0.118121,
+      "self": 4227.0,
+      "children": 359.2509765625,
+      "mps_driver": 2536.625
+    },
+    {
+      "round": 3,
+      "seconds": 20.425831833970733,
+      "usd": 0.1006568,
+      "self": 4239.0,
+      "children": 356.2509765625,
+      "mps_driver": 2536.625
+    },
+    {
+      "round": 4,
+      "seconds": 9.52431995794177,
+      "usd": 0.0085152,
+      "self": 4242.0,
+      "children": 360.2509765625,
+      "mps_driver": 2536.625
+    },
+    {
+      "round": 5,
+      "seconds": 18.689434583997354,
+      "usd": 0.0520108,
+      "self": 4248.0,
+      "children": 325.2509765625,
+      "mps_driver": 2536.625
+    },
+    {
+      "round": 6,
+      "seconds": 17.24151087505743,
+      "usd": 0.0498846,
+      "self": 4260.0,
+      "children": 323.2509765625,
+      "mps_driver": 2536.625
+    },
+    {
+      "round": 7,
+      "seconds": 19.138570750015788,
+      "usd": 0.0732694,
+      "self": 4274.0,
+      "children": 327.2509765625,
+      "mps_driver": 2536.625
+    },
+    {
+      "round": 8,
+      "seconds": 38.232107707997784,
+      "usd": 0.12771939999999998,
+      "self": 4281.0,
+      "children": 332.2509765625,
+      "mps_driver": 2536.625
+    },
+    {
+      "round": 9,
+      "seconds": 12.80446062493138,
+      "usd": 0.0244518,
+      "self": 4288.0,
+      "children": 344.2509765625,
+      "mps_driver": 2536.625
+    },
+    {
+      "round": 10,
+      "seconds": 12.536273333011195,
+      "usd": 0.009204200000000001,
+      "self": 4276.0,
+      "children": 395.2509765625,
+      "mps_driver": 2536.625
+    },
+    {
+      "round": 11,
+      "seconds": 23.685863333987072,
+      "usd": 0.08830139999999999,
+      "self": 4281.0,
+      "children": 380.2509765625,
+      "mps_driver": 2536.625
+    },
+    {
+      "round": 12,
+      "seconds": 21.339206416043453,
+      "usd": 0.0900962,
+      "self": 4291.0,
+      "children": 381.2509765625,
+      "mps_driver": 2536.625
+    },
+    {
+      "round": 13,
+      "seconds": 24.63495662494097,
+      "usd": 0.11231139999999999,
+      "self": 4301.0,
+      "children": 350.2509765625,
+      "mps_driver": 2536.625
+    },
+    {
+      "round": 14,
+      "seconds": 7.811533249914646,
+      "usd": 0.0089552,
+      "self": 4310.0,
+      "children": 352.2509765625,
+      "mps_driver": 2536.625
+    },
+    {
+      "round": 15,
+      "seconds": 25.944693417055532,
+      "usd": 0.0513412,
+      "self": 4242.0,
+      "children": 350.2509765625,
+      "mps_driver": 2536.625
+    },
+    {
+      "round": 16,
+      "seconds": 38.564818666898645,
+      "usd": 0.063136,
+      "self": 4241.0,
+      "children": 564.2509765625,
+      "mps_driver": 2536.625
+    },
+    {
+      "round": 17,
+      "seconds": 17.067351375008002,
+      "usd": 0.0716066,
+      "self": 4243.0,
+      "children": 556.2509765625,
+      "mps_driver": 2536.625
+    },
+    {
+      "round": 18,
+      "seconds": 35.70405775005929,
+      "usd": 0.114527,
+      "self": 4246.0,
+      "children": 363.2509765625,
+      "mps_driver": 2536.625
+    },
+    {
+      "round": 19,
+      "seconds": 14.063135833013803,
+      "usd": 0.0255368,
+      "self": 4252.0,
+      "children": 367.2509765625,
+      "mps_driver": 2536.625
+    },
+    {
+      "round": 20,
+      "seconds": 7.503122124937363,
+      "usd": 0.010139200000000001,
+      "self": 4259.0,
+      "children": 368.2509765625,
+      "mps_driver": 2536.625
+    }
+  ],
+  "usd_total": 2.1111542
+}

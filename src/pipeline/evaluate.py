@@ -27,7 +27,7 @@ import trimesh
 from PIL import Image
 
 from src.pipeline.canonical import axis_swap_rotation, canonicalize, random_rotation
-from src.config import DATA, DB_PATH, MESH, RAW
+from src.config import DB_PATH, EVAL_RESULTS as RESULTS, MESH, RAW
 from src.pipeline.embed import MODELS, Embedder, load
 from src.pipeline.extract import load_solids
 from src.pipeline.mesh import LEVELS, export, tessellate
@@ -35,7 +35,6 @@ from src.pipeline.render import COMPARE, VIEWS, Renderer, to_polydata
 
 POSES = {"world": "renders_world", "canonical": "renders"}
 POOLINGS = ("mean", "max", "maxsim")
-RESULTS = DATA / "eval"
 
 
 def normalize(x):
@@ -155,7 +154,7 @@ def main():
     for name, v in tol.items():
         print(f"  {name:7} coarse {v['coarse']:.4f} (worst view {v['min_coarse']:.4f})   fine {v['fine']:.4f}")
 
-    RESULTS.mkdir(exist_ok=True)
+    RESULTS.mkdir(parents=True, exist_ok=True)
     out = RESULTS / "step4_search.json"
     out.write_text(json.dumps({"n": args.n, "seed": args.seed, "queries": counts, "results": rows,
                                "tolerance": tol}, indent=2))

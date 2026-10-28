@@ -1,0 +1,180 @@
+{
+  "funnel": [
+    {
+      "stage": "files seen",
+      "count": 502
+    },
+    {
+      "stage": "files loaded",
+      "count": 492
+    },
+    {
+      "stage": "solids",
+      "count": 4613
+    },
+    {
+      "stage": "solids passed extract check",
+      "count": 4613
+    },
+    {
+      "stage": "unique solids (= parts)",
+      "count": 1626
+    },
+    {
+      "stage": "meshed (coarse + medium)",
+      "count": 1626
+    },
+    {
+      "stage": "passed triangle gate",
+      "count": 1625
+    },
+    {
+      "stage": "rendered (6 views)",
+      "count": 1625
+    },
+    {
+      "stage": "searchable (in Qdrant)",
+      "count": 1625
+    }
+  ],
+  "timing": {
+    "extract (load + measure), per file": {
+      "n": 492,
+      "total": 551.248,
+      "median": 0.093,
+      "p95": 4.671549999999998,
+      "max": 54.686
+    },
+    "mesh (coarse + medium tessellation), per part": {
+      "n": 1626,
+      "total": 58.45135096157901,
+      "median": 0.010767270519863814,
+      "p95": 0.10245118822786026,
+      "max": 3.955831166007556
+    },
+    "render (6 views), per part": {
+      "n": 1626,
+      "total": 198.575,
+      "median": 0.09,
+      "p95": 0.27725,
+      "max": 1.459
+    },
+    "embed (DINOv2, 6 views), per part": {
+      "n": 1625,
+      "total": 612.851,
+      "median": 0.35,
+      "p95": 0.409,
+      "max": 5.56
+    },
+    "other (export, DB, Qdrant, model load)": {
+      "total": 62.87464903842101
+    },
+    "job wall clock, per file (1 s resolution)": {
+      "n": 492,
+      "total": 1484.0,
+      "median": 1.0,
+      "p95": 13.0,
+      "max": 89.0
+    },
+    "job wall clock, per searchable part": {
+      "value": 0.9132307692307692
+    }
+  },
+  "storage": {
+    "step_bytes": 718074420,
+    "items": {
+      "coarse .glb (viewer)": {
+        "bytes": 82861276,
+        "x_step": 0.11539371643401529
+      },
+      "medium .glb (render source)": {
+        "bytes": 276535556,
+        "x_step": 0.38510709795232645
+      },
+      "medium .stl (ML copy)": {
+        "bytes": 470869684,
+        "x_step": 0.6557393925827354
+      },
+      "renders .png": {
+        "bytes": 73410111,
+        "x_step": 0.1022318981923907
+      },
+      "Qdrant parts collection": {
+        "bytes": 157683712,
+        "x_step": 0.21959243722955624
+      },
+      "SQLite registry": {
+        "bytes": 5627904,
+        "x_step": 0.00783749405806713
+      }
+    },
+    "generated_bytes": 1066988243,
+    "multiplier": 1.4859020364490911,
+    "not counted": "Qdrant docs collection (PLM text, step 6) 302 MB"
+  },
+  "failures": [
+    {
+      "unit": "file",
+      "kind": "retried, then done",
+      "cause": "qdrant_client.http.exceptions.ResponseHandlingException: [Errno 61] Connection refused",
+      "count": 1,
+      "example": "00000001_1ffb81a71e5b402e966b9341_step_000"
+    },
+    {
+      "unit": "file",
+      "kind": "retried, then done",
+      "cause": "(log overwritten)",
+      "count": 1,
+      "example": "00000003_1ffb81a71e5b402e966b9341_step_002"
+    },
+    {
+      "unit": "file",
+      "kind": "dead job",
+      "cause": "[extract] ValueError: STEP File could not be loaded",
+      "count": 1,
+      "example": "corrupt_part"
+    },
+    {
+      "unit": "file",
+      "kind": "dead job",
+      "cause": "[extract] ValueError: no solids (surfaces or wireframe only)",
+      "count": 9,
+      "example": "00000681_d3861046093048dfa1f1c1c5_step_000"
+    },
+    {
+      "unit": "solid",
+      "kind": "duplicate in same file (not searched, by design)",
+      "cause": "identical to an earlier solid",
+      "count": 2987,
+      "example": "00000005_d4fe04f0f5f84b52bd4f10e4_step_000_s01"
+    },
+    {
+      "unit": "part",
+      "kind": "rejected by triangle gate",
+      "cause": "medium mesh outside 4..500000 triangles",
+      "count": 1,
+      "example": "00008602_2af5cfda01db4b71815ec380_step_000_s00"
+    },
+    {
+      "unit": "part",
+      "kind": "flag: invalid B-rep (kept, meshed fine)",
+      "cause": "OpenCascade check failed",
+      "count": 10,
+      "example": "00001032_22f6176be40449be8c198881_step_000_s00"
+    },
+    {
+      "unit": "part",
+      "kind": "flag: medium mesh not watertight (kept)",
+      "cause": "open or inconsistent surface",
+      "count": 30,
+      "example": "00000012_f16882934f314832b639ffc0_step_000_s00"
+    },
+    {
+      "unit": "part",
+      "kind": "flag: medium mesh > 40% of triangle cap",
+      "cause": "over 200000 triangles",
+      "count": 5,
+      "example": "00000234_38a16b120d49465b86d5bd82_step_000_s00"
+    }
+  ]
+}

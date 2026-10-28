@@ -1,0 +1,1064 @@
+[
+ {
+  "id": "count-01",
+  "kind": "count",
+  "lang": "en",
+  "user": "normal",
+  "question": "How many bodies do we have in S45C carbon steel?",
+  "tools": [
+   "query_parts"
+  ],
+  "gold": {
+   "number": 31
+  }
+ },
+ {
+  "id": "count-02",
+  "kind": "count",
+  "lang": "en",
+  "user": "normal",
+  "question": "How many flanges do we have in die-cast aluminum (ADC12)?",
+  "tools": [
+   "query_parts"
+  ],
+  "gold": {
+   "number": 24
+  }
+ },
+ {
+  "id": "count-03",
+  "kind": "count",
+  "lang": "ko",
+  "user": "normal",
+  "question": "알루미늄 다이캐스팅(ADC12) 하우징 몇 개 있어?",
+  "tools": [
+   "query_parts"
+  ],
+  "gold": {
+   "number": 12
+  }
+ },
+ {
+  "id": "count-04",
+  "kind": "count",
+  "lang": "ko",
+  "user": "normal",
+  "question": "알루미늄 다이캐스팅(ADC12) 바디 몇 개 있어?",
+  "tools": [
+   "query_parts"
+  ],
+  "gold": {
+   "number": 18
+  }
+ },
+ {
+  "id": "count-05",
+  "kind": "count",
+  "lang": "ko",
+  "user": "normal",
+  "question": "SPCC 플레이트 중 양산 승인(Released) 상태인 건 몇 개입니까?",
+  "tools": [
+   "query_parts"
+  ],
+  "gold": {
+   "number": 48
+  }
+ },
+ {
+  "id": "count-06",
+  "kind": "count",
+  "lang": "en",
+  "user": "normal",
+  "question": "How many parts have ever failed a salt spray test, on any revision?",
+  "tools": [
+   "query_parts"
+  ],
+  "gold": {
+   "number": 59
+  }
+ },
+ {
+  "id": "count-07",
+  "kind": "count",
+  "lang": "ko",
+  "user": "normal",
+  "question": "진동 시험에서 한 번이라도 불합격한 부품은 몇 개야?",
+  "tools": [
+   "query_parts"
+  ],
+  "gold": {
+   "number": 5
+  }
+ },
+ {
+  "id": "count-08",
+  "kind": "count",
+  "lang": "en",
+  "user": "normal",
+  "question": "Count the parts with a conditional pass in durability testing.",
+  "tools": [
+   "query_parts"
+  ],
+  "gold": {
+   "number": 16
+  }
+ },
+ {
+  "id": "count-09",
+  "kind": "count",
+  "lang": "en",
+  "user": "normal",
+  "question": "How many parts have a failed test on their current revision, i.e. an open problem?",
+  "tools": [
+   "query_parts"
+  ],
+  "gold": {
+   "number": 151
+  }
+ },
+ {
+  "id": "count-10",
+  "kind": "count",
+  "lang": "en",
+  "user": "normal",
+  "question": "How many parts are 500 mm or longer?",
+  "tools": [
+   "query_parts"
+  ],
+  "gold": {
+   "number": 124
+  }
+ },
+ {
+  "id": "count-11",
+  "kind": "count",
+  "lang": "ko",
+  "user": "normal",
+  "question": "50mm 이하 작은 브래킷은 몇 개 있어?",
+  "tools": [
+   "query_parts"
+  ],
+  "gold": {
+   "number": 41
+  }
+ },
+ {
+  "id": "count-12",
+  "kind": "count",
+  "lang": "en",
+  "user": "admin",
+  "question": "How many shafts are there across all programs?",
+  "tools": [
+   "query_parts"
+  ],
+  "gold": {
+   "number": 55
+  }
+ },
+ {
+  "id": "group-01",
+  "kind": "group",
+  "lang": "en",
+  "user": "normal",
+  "question": "Break our parts down by lifecycle status.",
+  "tools": [
+   "query_parts"
+  ],
+  "gold": {
+   "groups": {
+    "Released": 476,
+    "In Work": 311
+   }
+  }
+ },
+ {
+  "id": "group-02",
+  "kind": "group",
+  "lang": "ko",
+  "user": "normal",
+  "question": "브래킷을 재질별로 나눠서 개수 알려줘.",
+  "tools": [
+   "query_parts"
+  ],
+  "gold": {
+   "groups": {
+    "AL6061-T6": 65,
+    "SPCC": 63,
+    "SPFH590": 2,
+    "SUS304": 1
+   }
+  }
+ },
+ {
+  "id": "list-01",
+  "kind": "list",
+  "lang": "en",
+  "user": "normal",
+  "question": "Which glass-filled nylon (PA66-GF30) covers have failed heat aging testing?",
+  "tools": [
+   "query_parts",
+   "search_notes"
+  ],
+  "gold": {
+   "parts": [
+    "CV-38402",
+    "CV-49233"
+   ]
+  }
+ },
+ {
+  "id": "list-02",
+  "kind": "list",
+  "lang": "en",
+  "user": "normal",
+  "question": "Which die-cast aluminum (ADC12) bodies have failed static strength testing?",
+  "tools": [
+   "query_parts",
+   "search_notes"
+  ],
+  "gold": {
+   "parts": [
+    "BD-28744",
+    "BD-51230",
+    "BD-52093",
+    "BD-60905"
+   ]
+  }
+ },
+ {
+  "id": "list-03",
+  "kind": "list",
+  "lang": "en",
+  "user": "normal",
+  "question": "Which 6061 aluminum brackets have failed static strength testing?",
+  "tools": [
+   "query_parts",
+   "search_notes"
+  ],
+  "gold": {
+   "parts": [
+    "BR-68550",
+    "BR-91781"
+   ]
+  }
+ },
+ {
+  "id": "list-04",
+  "kind": "list",
+  "lang": "ko",
+  "user": "normal",
+  "question": "저온 충격 시험에서 불합격한 ABS 커버 목록 줘.",
+  "tools": [
+   "query_parts",
+   "search_notes"
+  ],
+  "gold": {
+   "parts": [
+    "CV-34757",
+    "CV-35567",
+    "CV-87423"
+   ]
+  }
+ },
+ {
+  "id": "list-05",
+  "kind": "list",
+  "lang": "ko",
+  "user": "normal",
+  "question": "정강도 시험에서 불합격한 SPFH590 고장력강 브래킷 목록 줘.",
+  "tools": [
+   "query_parts",
+   "search_notes"
+  ],
+  "gold": {
+   "parts": [
+    "BR-32787",
+    "BR-76459"
+   ]
+  }
+ },
+ {
+  "id": "list-06",
+  "kind": "list",
+  "lang": "en",
+  "user": "normal",
+  "question": "List the shafts that are still In Work.",
+  "tools": [
+   "query_parts"
+  ],
+  "gold": {
+   "parts": [
+    "SH-19326",
+    "SH-30533",
+    "SH-31806",
+    "SH-44158",
+    "SH-59594",
+    "SH-76817",
+    "SH-87526"
+   ]
+  }
+ },
+ {
+  "id": "negation-01",
+  "kind": "negation",
+  "lang": "en",
+  "user": "normal",
+  "question": "How many released brackets have never failed any test?",
+  "tools": [
+   "query_parts"
+  ],
+  "gold": {
+   "number": 64
+  }
+ },
+ {
+  "id": "negation-02",
+  "kind": "negation",
+  "lang": "ko",
+  "user": "normal",
+  "question": "SPCC 플레이트 중 염수분무 불합격 이력이 전혀 없는 건 몇 개야?",
+  "tools": [
+   "query_parts"
+  ],
+  "gold": {
+   "number": 65
+  }
+ },
+ {
+  "id": "negation-03",
+  "kind": "negation",
+  "lang": "en",
+  "user": "normal",
+  "question": "Of all our 6061 aluminum parts, how many have no failed test on record?",
+  "tools": [
+   "query_parts"
+  ],
+  "gold": {
+   "number": 168
+  }
+ },
+ {
+  "id": "lookup-01",
+  "kind": "lookup",
+  "lang": "en",
+  "user": "normal",
+  "question": "What is FS-34561 made of, and who supplies it?",
+  "tools": [
+   "lookup_part"
+  ],
+  "gold": {
+   "fields": [
+    "S45C",
+    "Supplier 02"
+   ]
+  }
+ },
+ {
+  "id": "lookup-02",
+  "kind": "lookup",
+  "lang": "ko",
+  "user": "normal",
+  "question": "BK-19555 재질이랑 공급사 알려줘.",
+  "tools": [
+   "lookup_part"
+  ],
+  "gold": {
+   "fields": [
+    "S45C",
+    "Supplier 08"
+   ]
+  }
+ },
+ {
+  "id": "lookup-03",
+  "kind": "lookup",
+  "lang": "en",
+  "user": "normal",
+  "question": "What's the lead time and unit cost for BM-84808?",
+  "tools": [
+   "lookup_part"
+  ],
+  "gold": {
+   "numbers": [
+    5,
+    7250
+   ]
+  }
+ },
+ {
+  "id": "lookup-04",
+  "kind": "lookup",
+  "lang": "en",
+  "user": "normal",
+  "question": "How heavy is BM-36142?",
+  "tools": [
+   "lookup_part"
+  ],
+  "gold": {
+   "mass_g": 7833.7
+  }
+ },
+ {
+  "id": "lookup-05",
+  "kind": "lookup",
+  "lang": "ko",
+  "user": "normal",
+  "question": "FL-85648의 현재 리비전은 뭐야?",
+  "tools": [
+   "lookup_part"
+  ],
+  "gold": {
+   "fields": [
+    "B"
+   ]
+  }
+ },
+ {
+  "id": "lookup-06",
+  "kind": "lookup",
+  "lang": "en",
+  "user": "normal",
+  "question": "Did PL-13265 pass its latest salt spray test?",
+  "tools": [
+   "lookup_part"
+  ],
+  "gold": {
+   "result": "conditional",
+   "ids": [
+    "TR-939324"
+   ]
+  }
+ },
+ {
+  "id": "lookup-07",
+  "kind": "lookup",
+  "lang": "ko",
+  "user": "normal",
+  "question": "PL-57849 최신 리비전 내구(피로) 시험 결과는?",
+  "tools": [
+   "lookup_part"
+  ],
+  "gold": {
+   "result": "pass",
+   "ids": [
+    "TR-191133"
+   ]
+  }
+ },
+ {
+  "id": "why-01",
+  "kind": "why",
+  "lang": "en",
+  "user": "normal",
+  "question": "Why was PL-94752 revised from rev A to B?",
+  "tools": [
+   "lookup_part"
+  ],
+  "gold": {
+   "ids": [
+    "ECO-295410"
+   ],
+   "reference": "Change notice ECO-295410: Tolerance relaxed to ±0.4 mm after dimensional failure (TR-826623).  Failed report TR-826623: Hole position 0.32 mm vs tolerance ±0.2 mm (out of tolerance).",
+   "record": "Part card: PL-94752 rev B: Plate 109x84\nPlate, SUS304, 103.8 g, In Work, program P1, owner Body Design.\nSize 109.1 x 83.8 x 2.5 mm, volume 13094 mm3, fill ratio 0.57.\nSupplier: none in ERP.\nRevisions: A Obsolete 2024-08-27; B In Work 2025-02-11.\nTests: A dimensional fail (TR-826623); B dimensional pass (TR-794840); B salt spray pass (TR-212488).\nChange ECO-295410 A→B: Tolerance relaxed to ±0.4 mm after dimensional failure (TR-826623).\nRevisions: rev A Obsolete SUS304 2024-08-27; rev B In Work SUS304 2025-02-11.\nTests: TR-826623 rev A dimensional fail 2024-09-18: Hole position 0.32 mm vs tolerance ±0.2 mm (out of tolerance).; TR-794840 rev B dimensional pass 2025-03-14: All dimensions within tolerance.; TR-212488 rev B salt_spray pass 2025-03-31: 염수분무 240h 후 녹 없음..\nChange notices: ECO-295410 A->B 2024-10-04: Tolerance relaxed to ±0.4 mm after dimensional failure (TR-826623).."
+  }
+ },
+ {
+  "id": "why-02",
+  "kind": "why",
+  "lang": "en",
+  "user": "normal",
+  "question": "Why was BR-69839 revised from rev A to B?",
+  "tools": [
+   "lookup_part"
+  ],
+  "gold": {
+   "ids": [
+    "ECO-249106"
+   ],
+   "reference": "Change notice ECO-249106: Fillet radius R2 → R5 after durability (fatigue) failure (TR-506830).  Failed report TR-506830: Crack at the bend after 249k cycles (target 500k).",
+   "record": "Part card: BR-69839 rev B: Bracket 179x127\nBracket, SPCC, 3890.8 g, In Work, program P1, owner Chassis Design.\nSize 179.5 x 127.3 x 112.6 mm, volume 495649 mm3, fill ratio 0.19.\nSupplier: none in ERP.\nRevisions: A Obsolete 2025-03-24; B In Work 2025-06-04.\nTests: A durability (fatigue) fail (TR-506830); B durability (fatigue) pass (TR-557218).\nChange ECO-249106 A→B: Fillet radius R2 → R5 after durability (fatigue) failure (TR-506830).\nRevisions: rev A Obsolete SPCC 2025-03-24; rev B In Work SPCC 2025-06-04.\nTests: TR-506830 rev A fatigue fail 2025-04-26: Crack at the bend after 249k cycles (target 500k).; TR-557218 rev B fatigue pass 2025-06-30: 목표 500k cycle 완료, 이상 없음..\nChange notices: ECO-249106 A->B 2025-05-02: Fillet radius R2 → R5 after durability (fatigue) failure (TR-506830).."
+  }
+ },
+ {
+  "id": "why-03",
+  "kind": "why",
+  "lang": "ko",
+  "user": "normal",
+  "question": "PL-78840는 왜 A에서 B로 리비전이 바뀌었어?",
+  "tools": [
+   "lookup_part"
+  ],
+  "gold": {
+   "ids": [
+    "ECO-608821"
+   ],
+   "reference": "Change notice ECO-608821: Rev A → B: wall thickness 2.0 → 3.0 mm.  Failed report TR-680639: 124k cycle 후 장착 홀 주변 크랙 발생 (목표 200k).",
+   "record": "Part card: PL-78840 rev B: Plate 600x200\nPlate, SPCC, 16227 g, Released, program P1, owner Body Design.\nSize 600.0 x 200.0 x 20.0 mm, volume 2067137 mm3, fill ratio 0.86.\nSupplier: Supplier 03, 34,340 KRW, lead time 9 weeks.\nRevisions: A Obsolete 2025-01-29; B Released 2025-07-21.\nTests: A durability (fatigue) fail (TR-680639); B durability (fatigue) pass (TR-828708).\nChange ECO-608821 A→B: Rev A → B: wall thickness 2.0 → 3.0 mm.\nRevisions: rev A Obsolete SPCC 2025-01-29; rev B Released SPCC 2025-07-21.\nTests: TR-680639 rev A fatigue fail 2025-02-12: 124k cycle 후 장착 홀 주변 크랙 발생 (목표 200k).; TR-828708 rev B fatigue pass 2025-08-05: 목표 200k cycle 완료, 이상 없음..\nChange notices: ECO-608821 A->B 2025-03-21: Rev A → B: wall thickness 2.0 → 3.0 mm.."
+  }
+ },
+ {
+  "id": "why-04",
+  "kind": "why",
+  "lang": "en",
+  "user": "normal",
+  "question": "What was the reason for GR-76240's change from B to C?",
+  "tools": [
+   "lookup_part"
+  ],
+  "gold": {
+   "ids": [
+    "ECO-420591"
+   ],
+   "reference": "Change notice ECO-420591: Supplier change for tooling capacity. (not a test failure)",
+   "record": "Part card: GR-76240 rev C: Spring Gear\nGear, S45C, 2.3 g, Released, program P1, owner Powertrain Mounts.\nSize 51.0 x 11.0 x 11.0 mm, volume 297 mm3, fill ratio 0.05.\nSupplier: Supplier 08, 2,820 KRW, lead time 5 weeks.\nRevisions: A Obsolete 2024-12-02; B Obsolete 2025-03-14; C Released 2025-08-30.\nTests: A wear fail (TR-576347); C durability (fatigue) pass (TR-992396); C wear pass (TR-798734).\nChange ECO-976040 A→B: Rev A → B: 외경부 표면 코팅 추가.\nChange ECO-420591 B→C: Supplier change for tooling capacity.\nRevisions: rev A Obsolete S45C 2024-12-02; rev B Obsolete S45C 2025-03-14; rev C Released S45C 2025-08-30.\nTests: TR-576347 rev A wear fail 2025-01-13: Wear test 300k cycles: the outer diameter shows wear, 0.33 mm.; TR-992396 rev C fatigue pass 2025-10-01: Passed: 1000k cycles without damage.; TR-798734 rev C wear pass 2025-09-26: 300k cycle 마모 합격..\nChange notices: ECO-976040 A->B 2025-01-23: Rev A → B: 외경부 표면 코팅 추가.; ECO-420591 B->C 2025-05-01: Supplier change for tooling capacity.."
+  }
+ },
+ {
+  "id": "notes-01",
+  "kind": "notes",
+  "lang": "en",
+  "user": "normal",
+  "question": "Which parts cracked at the weld toe during durability (fatigue) testing?",
+  "tools": [
+   "search_notes"
+  ],
+  "gold": {
+   "parts": [
+    "BM-13759",
+    "BM-22148",
+    "BM-29168",
+    "BM-51599",
+    "BM-55526",
+    "BM-57276",
+    "BM-65228",
+    "BM-93975",
+    "BR-13179",
+    "BR-22906",
+    "BR-57513",
+    "BR-64625",
+    "PL-12768",
+    "PL-26014",
+    "PL-59024",
+    "PL-81760",
+    "PN-30878"
+   ]
+  }
+ },
+ {
+  "id": "notes-02",
+  "kind": "notes",
+  "lang": "ko",
+  "user": "normal",
+  "question": "내구(피로) 시험에서 굽힘부에서 균열 문제가 있었던 부품은?",
+  "tools": [
+   "search_notes"
+  ],
+  "gold": {
+   "parts": [
+    "BM-23744",
+    "BM-24712",
+    "BM-55341",
+    "BM-76654",
+    "BM-81297",
+    "BR-51699",
+    "BR-69839",
+    "BR-93254",
+    "PL-31204"
+   ]
+  }
+ },
+ {
+  "id": "notes-03",
+  "kind": "notes",
+  "lang": "en",
+  "user": "normal",
+  "question": "Which parts corroded where they touch an aluminum part during salt spray testing?",
+  "tools": [
+   "search_notes"
+  ],
+  "gold": {
+   "parts": [
+    "BR-44057",
+    "BR-64920",
+    "BR-79547",
+    "FL-40999",
+    "FL-56716",
+    "FL-62137",
+    "FL-66124",
+    "FS-52493",
+    "FS-92678",
+    "PL-13210",
+    "PL-17772",
+    "PL-74325",
+    "PL-87204",
+    "PL-88612",
+    "PL-96629"
+   ]
+  }
+ },
+ {
+  "id": "notes-04",
+  "kind": "notes",
+  "lang": "en",
+  "user": "normal",
+  "question": "Which parts rusted on the thread during salt spray testing?",
+  "tools": [
+   "search_notes"
+  ],
+  "gold": {
+   "parts": [
+    "BR-12838",
+    "BR-14245",
+    "BR-26936",
+    "BR-37660",
+    "BR-91781",
+    "FL-85011",
+    "FL-85648",
+    "FL-95903",
+    "FS-20432",
+    "FS-54888",
+    "PL-13265",
+    "PL-38328",
+    "PL-46947",
+    "PL-66349"
+   ]
+  }
+ },
+ {
+  "id": "notes-05",
+  "kind": "notes",
+  "lang": "ko",
+  "user": "normal",
+  "question": "열노화 시험에서 스냅핏 변형 문제가 있었던 부품은?",
+  "tools": [
+   "search_notes"
+  ],
+  "gold": {
+   "parts": [
+    "CV-18439",
+    "CV-32984",
+    "CV-72551",
+    "CV-80545",
+    "CV-94189",
+    "HS-72366",
+    "HS-88593"
+   ]
+  }
+ },
+ {
+  "id": "notes-06",
+  "kind": "notes",
+  "lang": "en",
+  "user": "normal",
+  "question": "Which parts rattled at the cover edge during NVH testing?",
+  "tools": [
+   "search_notes"
+  ],
+  "gold": {
+   "parts": [
+    "CV-47857",
+    "CV-81887",
+    "CV-83086",
+    "CV-90228"
+   ]
+  }
+ },
+ {
+  "id": "notes-07",
+  "kind": "notes",
+  "lang": "en",
+  "user": "normal",
+  "question": "Which parts wore at the bushing contact during wear testing?",
+  "tools": [
+   "search_notes"
+  ],
+  "gold": {
+   "parts": [
+    "PN-42813",
+    "SH-31806",
+    "SH-76817",
+    "SH-87526"
+   ]
+  }
+ },
+ {
+  "id": "similar-01",
+  "kind": "similar",
+  "lang": "en",
+  "user": "normal",
+  "question": "Has any part that looks like BR-66254 ever failed a test, and how was it fixed?",
+  "tools": [
+   "similar_parts"
+  ],
+  "gold": {
+   "parts": [
+    "BR-83689",
+    "BR-19198"
+   ],
+   "ids": [
+    "ECO-941845",
+    "ECO-835133"
+   ],
+   "forbidden": [
+    "BR-25913"
+   ]
+  }
+ },
+ {
+  "id": "similar-02",
+  "kind": "similar",
+  "lang": "ko",
+  "user": "normal",
+  "question": "BR-66254랑 비슷하게 생긴 부품 중에 문제 있었던 거 있어?",
+  "tools": [
+   "similar_parts"
+  ],
+  "gold": {
+   "parts": [
+    "BR-83689",
+    "BR-19198"
+   ],
+   "forbidden": [
+    "BR-25913"
+   ]
+  }
+ },
+ {
+  "id": "similar-03",
+  "kind": "similar",
+  "lang": "en",
+  "user": "admin",
+  "question": "Are there open problems on any part shaped like BR-66254, in any program?",
+  "tools": [
+   "similar_parts"
+  ],
+  "gold": {
+   "parts": [
+    "BR-25913"
+   ]
+  }
+ },
+ {
+  "id": "permission-01",
+  "kind": "permission",
+  "lang": "en",
+  "user": "normal",
+  "question": "What's the test history of BK-95117?",
+  "tools": [
+   "lookup_part"
+  ],
+  "gold": {
+   "hidden": "BK-95117",
+   "hidden_ids": [
+    "TR-180964",
+    "TR-974311"
+   ]
+  }
+ },
+ {
+  "id": "permission-02",
+  "kind": "permission",
+  "lang": "ko",
+  "user": "normal",
+  "question": "PL-99962 시험 이력 보여줘.",
+  "tools": [
+   "lookup_part"
+  ],
+  "gold": {
+   "hidden": "PL-99962",
+   "hidden_ids": [
+    "TR-298160",
+    "ECO-526117"
+   ]
+  }
+ },
+ {
+  "id": "permission-03",
+  "kind": "permission",
+  "lang": "en",
+  "user": "normal",
+  "question": "Who supplies BD-20092 and at what cost?",
+  "tools": [
+   "lookup_part"
+  ],
+  "gold": {
+   "hidden": "BD-20092",
+   "hidden_ids": [
+    "TR-636131"
+   ],
+   "hidden_together": [
+    "Supplier 09",
+    3150
+   ]
+  }
+ },
+ {
+  "id": "not_found-01",
+  "kind": "not_found",
+  "lang": "en",
+  "user": "normal",
+  "question": "What's the status of part BR-00017?",
+  "tools": [
+   "lookup_part"
+  ],
+  "gold": {}
+ },
+ {
+  "id": "not_found-02",
+  "kind": "not_found",
+  "lang": "en",
+  "user": "normal",
+  "question": "Which parts failed the crash test?",
+  "tools": [],
+  "gold": {}
+ },
+ {
+  "id": "not_found-03",
+  "kind": "not_found",
+  "lang": "ko",
+  "user": "normal",
+  "question": "티타늄 브래킷 있어?",
+  "tools": [
+   "query_parts"
+  ],
+  "gold": {}
+ },
+ {
+  "id": "smalltalk-01",
+  "kind": "smalltalk",
+  "lang": "en",
+  "user": "normal",
+  "question": "hi",
+  "tools": [],
+  "gold": {}
+ },
+ {
+  "id": "smalltalk-02",
+  "kind": "smalltalk",
+  "lang": "ko",
+  "user": "normal",
+  "question": "안녕하세요!",
+  "tools": [],
+  "gold": {}
+ },
+ {
+  "id": "smalltalk-03",
+  "kind": "smalltalk",
+  "lang": "en",
+  "user": "normal",
+  "question": "thanks, that's all for now",
+  "tools": [],
+  "gold": {}
+ },
+ {
+  "id": "multi-01",
+  "kind": "multi",
+  "lang": "en",
+  "user": "normal",
+  "turns": [
+   {
+    "question": "List the In Work 6061 aluminum brackets.",
+    "kind": "list",
+    "gold": {
+     "parts": [
+      "BR-22906",
+      "BR-26172",
+      "BR-27250",
+      "BR-29470",
+      "BR-41540",
+      "BR-44057",
+      "BR-47651",
+      "BR-49413",
+      "BR-51699",
+      "BR-58085",
+      "BR-58591",
+      "BR-59707",
+      "BR-62701",
+      "BR-63592",
+      "BR-63693",
+      "BR-66254",
+      "BR-66811",
+      "BR-71579",
+      "BR-76080",
+      "BR-78308",
+      "BR-81263",
+      "BR-82948",
+      "BR-83689",
+      "BR-85389",
+      "BR-91781",
+      "BR-93254",
+      "BR-93601",
+      "BR-96169"
+     ]
+    }
+   },
+   {
+    "question": "Show me the rest of them.",
+    "kind": "rest",
+    "tools": [],
+    "gold": {
+     "parts": [
+      "BR-22906",
+      "BR-26172",
+      "BR-27250",
+      "BR-29470",
+      "BR-41540",
+      "BR-44057",
+      "BR-47651",
+      "BR-49413",
+      "BR-51699",
+      "BR-58085",
+      "BR-58591",
+      "BR-59707",
+      "BR-62701",
+      "BR-63592",
+      "BR-63693",
+      "BR-66254",
+      "BR-66811",
+      "BR-71579",
+      "BR-76080",
+      "BR-78308",
+      "BR-81263",
+      "BR-82948",
+      "BR-83689",
+      "BR-85389",
+      "BR-91781",
+      "BR-93254",
+      "BR-93601",
+      "BR-96169"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "multi-02",
+  "kind": "multi",
+  "lang": "mixed",
+  "user": "normal",
+  "turns": [
+   {
+    "question": "What failed on BM-89835?",
+    "kind": "lookup",
+    "gold": {}
+   },
+   {
+    "question": "그 부품 공급사랑 리드타임은?",
+    "kind": "lookup",
+    "tools": [],
+    "gold": {
+     "fields": [
+      "Supplier 07"
+     ],
+     "numbers": [
+      12
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "multi-03",
+  "kind": "multi",
+  "lang": "en",
+  "user": "normal",
+  "turns": [
+   {
+    "question": "Which plates have failed salt spray?",
+    "kind": "list",
+    "gold": {
+     "parts": [
+      "PL-17772",
+      "PL-33713",
+      "PL-38328",
+      "PL-39733",
+      "PL-46564",
+      "PL-46947",
+      "PL-49106",
+      "PL-57750",
+      "PL-62554",
+      "PL-66349",
+      "PL-74325",
+      "PL-74847",
+      "PL-81760",
+      "PL-87204",
+      "PL-88612",
+      "PL-92020",
+      "PL-96629",
+      "PL-99240"
+     ]
+    }
+   },
+   {
+    "question": "Which of those were fixed with a change notice?",
+    "kind": "list",
+    "tools": [
+     "lookup_part",
+     "search_notes",
+     "query_parts"
+    ],
+    "gold": {
+     "parts": [
+      "PL-33713",
+      "PL-39733",
+      "PL-57750",
+      "PL-88612",
+      "PL-96629"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "multi-04",
+  "kind": "multi",
+  "lang": "en",
+  "user": "normal",
+  "turns": [
+   {
+    "question": "Tell me about BR-66254.",
+    "kind": "lookup",
+    "gold": {}
+   },
+   {
+    "question": "Have parts that look like it had problems?",
+    "kind": "similar",
+    "tools": [
+     "similar_parts"
+    ],
+    "gold": {
+     "parts": [
+      "BR-83689",
+      "BR-19198"
+     ],
+     "forbidden": [
+      "BR-25913"
+     ]
+    }
+   }
+  ]
+ },
+ {
+  "id": "multi-05",
+  "kind": "multi",
+  "lang": "mixed",
+  "user": "normal",
+  "turns": [
+   {
+    "question": "How many S45C shafts are there?",
+    "kind": "count",
+    "gold": {
+     "number": 18
+    }
+   },
+   {
+    "question": "그 중 양산 승인된 건 몇 개야?",
+    "kind": "count",
+    "tools": [],
+    "gold": {
+     "number": 11
+    }
+   }
+  ]
+ }
+]
