@@ -111,7 +111,7 @@ def export(verts, tris, formats):
     if "glb" in formats:
         viewer = split.copy()
         viewer.apply_scale(0.001)
-        out["glb"] = viewer.export(file_type="glb")
+        out["glb"] = viewer.export(file_type="glb", include_normals=True)  # else viewers shade flat
     if "stl" in formats:
         out["stl"] = merged.export(file_type="stl")
     return out, merged

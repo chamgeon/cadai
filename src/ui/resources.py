@@ -74,7 +74,7 @@ class CadWorker:
             return self._read()
 
 
-@st.cache_resource(show_spinner="Loading models, once per server start (~30 s)…")
+@st.cache_resource(show_spinner="모델 로딩 중, 서버 시작 시 한 번 (~30초) · Loading models, once per server start (~30 s)…")
 def models():
     start = time.perf_counter()
 

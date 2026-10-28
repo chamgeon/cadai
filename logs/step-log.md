@@ -295,9 +295,9 @@ Medium is already sub-pixel at the model's 224 px. Fine used 71% of storage and 
 **Open issues**
 1. ~~No multi-turn chat~~ → done (3-turn check: turn 3 "그 부품 재질 다시 알려줘" answered from history, 0 tool calls, 2.3 s). Eval cases: see "For step 8" above.
 2. ~~Upload is not part of the chat~~ → done (sample bracket: NEW-1 → BR-66254 at 1.0, agent called `similar_parts(NEW-1)` itself; image + PDF + text in one question: 7.1 s). Not yet: a real photo, a large PDF's token cost, Word files.
-3. **Page title "cadai · part search"** (`app.py`) → rename.
-4. Pipeline glbs written without normals (step 2 bug); UI works around it. Fix: `include_normals=True` + rewrite the glb files only, no `MESH_VER` bump.
+3. ~~Page title~~ → "cadai".
+4. ~~Pipeline glbs without normals~~ → `mesh.export(include_normals=True)`; the 3,252 existing glbs rewritten in place (vertices and faces checked identical, `glb_bytes` updated), no `MESH_VER` bump. glbs +47% (251 → 359 MB). The UI still adds the material.
 5. Streamlit process grows 3.15 → 4.2 GB with use (likely the MPS cache); not yet checked whether it plateaus.
-6. **No Korean UI:** labels, captions and examples are English only (questions and answers already work in Korean).
+6. ~~No Korean UI~~ → bilingual, Korean first (no toggle): `widgets.bi()` = Korean + small grey English for labels, buttons, tabs, status; `bi_lines()` puts a sentence's English on the next line (inline mixing read badly in sentences); `bi_plain()` "한국어 · English" where Streamlit shows plain text (menu, placeholders, options). Checked in Chrome on all three pages. Data, PLM cards, answers and example questions stay as they are.
 7. **Design too generic:** default Streamlit look; needs its own visual identity.
 8. Not done: full 2-minute demo run, latency table for step 8, README demo command, answer streaming.

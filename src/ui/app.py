@@ -24,8 +24,9 @@ logging.getLogger("streamlit.watcher.local_sources_watcher").setLevel(logging.ER
 from src.config import DB_PATH
 from src.qa.plm import USERS
 from src.ui import resources
+from src.ui.widgets import bi, bi_lines, bi_plain
 
-st.set_page_config(page_title="cadai · part search", page_icon=":material/precision_manufacturing:", layout="wide")
+st.set_page_config(page_title="cadai", page_icon=":material/precision_manufacturing:", layout="wide")
 
 
 @st.cache_data(ttl=30)
@@ -57,24 +58,26 @@ cad = resources.cad()  # first: it starts loading in its own process without wai
 models = resources.models()
 
 with st.sidebar:
-    st.selectbox("User", list(USERS), key="user", on_change=user_changed,
-                 format_func=lambda u: f"{u}  ·  programs {', '.join(USERS[u])}")
+    st.selectbox(bi("사용자", "User"), list(USERS), key="user", on_change=user_changed,
+                 format_func=lambda u: f"{u}  ·  {', '.join(USERS[u])}")
     n, total = visible_parts(st.session_state.user)
-    st.caption(f"Sees {n:,} of {total:,} part numbers")
+    st.caption(bi_lines(f"부품번호 {total:,}개 중 {n:,}개 열람", f"Sees {n:,} of {total:,} part numbers"))
 
     st.divider()
     counts = index_counts()
     if "error" in counts:
-        st.error(f"Qdrant unreachable: start it with `docker start qdrant`\n\n{counts['error']}")
+        st.error(bi("Qdrant 연결 안 됨", "Qdrant unreachable") + f": `docker start qdrant`\n\n{counts['error']}")
     else:
-        st.caption(f"Index: {counts['parts']:,} shapes · {counts['docs']:,} text chunks")
+        st.caption(bi_lines(f"인덱스: 형상 {counts['parts']:,}개 · 텍스트 {counts['docs']:,}개",
+                            f"Index: {counts['parts']:,} shapes · {counts['docs']:,} text chunks"))
     warm = cad.ready()
-    st.caption(f"Models ready in {models.seconds} s · CAD worker "
-               + (f"ready in {warm['seconds']} s" if warm.get("ok") else f"failed: {warm.get('error')}"))
+    st.caption(bi_lines(f"모델 {models.seconds}초 · CAD 워커 " + (f"{warm['seconds']}초" if warm.get("ok") else "실패"),
+                        f"Models {models.seconds} s · CAD worker "
+                  + (f"{warm['seconds']} s" if warm.get("ok") else f"failed: {warm.get('error')}")))
 
 pages = [
-    st.Page("views/search.py", title="Search", icon=":material/search:", default=True),
-    st.Page("views/part.py", title="Part", icon=":material/category:"),
-    st.Page("views/ask.py", title="Ask", icon=":material/chat:"),
+    st.Page("views/search.py", title=bi_plain("검색", "Search"), icon=":material/search:", default=True),
+    st.Page("views/part.py", title=bi_plain("부품", "Part"), icon=":material/category:"),
+    st.Page("views/ask.py", title=bi_plain("질문", "Ask"), icon=":material/chat:"),
 ]
 st.navigation(pages).run()

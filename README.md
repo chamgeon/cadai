@@ -2,7 +2,8 @@
 
 Mini CAD-to-AI pipeline: STEP files → metadata → meshes → renders → embeddings → similar-part search + RAG Q&A.
 See `docs/cad-ai-interview-prep-plan.md` for the plan, `docs/pipeline.pdf` and `docs/query-flow.pdf` for how
-the system works, and `logs/step-log.md` for progress per step.
+the system works (rebuilt by `python docs/src/build_docs.py [pipeline] [query]`), and `logs/step-log.md`
+for progress per step.
 
 ## Setup
     conda env create -f environment.yml

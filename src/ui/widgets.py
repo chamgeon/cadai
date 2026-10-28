@@ -1,4 +1,8 @@
-"""Step 7: pieces shared by the pages: render paths, part links, badges, part tiles, similar-parts grid, 3D view."""
+"""Step 7: pieces shared by the pages: render paths, part links, badges, part tiles, similar-parts grid, 3D view.
+
+Every label is bilingual, Korean first: bi() where Streamlit renders markdown (titles, captions, labels,
+buttons, tabs, status), bi_lines() for whole sentences, bi_plain() where it shows plain text (menu,
+placeholders, dropdown options)."""
 import base64
 from pathlib import Path
 
@@ -10,11 +14,25 @@ from trimesh.visual.material import PBRMaterial
 from src.config import MESH, RENDERS
 
 PART_PAGE = "views/part.py"
-VIEW_NAMES = ("front", "back", "left", "right", "top", "iso")
+VIEW_NAMES = ("정면 · front", "후면 · back", "좌측 · left", "우측 · right", "평면 · top", "iso")
 ISO = 5
 STATUS_COLOR = {"Released": "green", "In Work": "orange", "Obsolete": "gray"}
 RESULT_COLOR = {"fail": "red", "conditional": "orange", "pass": "green"}
-SIZE_FILTERS = {"any size": None, "within 1.5×": 1.5, "within 2×": 2.0}
+SIZE_FILTERS = {"전체 · any size": None, "1.5배 이내 · within 1.5×": 1.5, "2배 이내 · within 2×": 2.0}
+
+
+def bi(ko, en):
+    """Korean, then English small and grey (markdown)."""
+    return f"{ko} :gray[:small[{en}]]"
+
+
+def bi_lines(ko, en):
+    """A sentence: Korean, then the English on the next line, small and grey."""
+    return f"{ko}  \n:gray[:small[{en}]]"
+
+
+def bi_plain(ko, en):
+    return f"{ko} · {en}"
 
 
 def render(part_id, view=ISO):
@@ -53,7 +71,7 @@ def status_badge(status):
 def results_badges(counts):
     """{"fail": 2, "pass": 3} -> red/orange/green badges, worst first; "no tests" if empty."""
     shown = [f":{RESULT_COLOR[r]}-badge[{counts[r]} {r}]" for r in RESULT_COLOR if counts.get(r)]
-    return " ".join(shown) or ":gray-badge[no tests]"
+    return " ".join(shown) or ":gray-badge[시험 없음] :gray[:small[no tests]]"
 
 
 def card_markdown(text):
@@ -91,10 +109,9 @@ def part_tile(part_id, part_no, lines):
 
 @st.cache_data(max_entries=200, show_spinner=False)
 def viewer_glb(glb_path, mtime):
-    """The pipeline's glb as a viewer needs it. src.pipeline.mesh exports it without normals (export() lacks
-    include_normals=True) and without a material, so viewers shade each triangle flat (curved faces shimmer
-    and change colour as the part turns) in plain white. Loaded without welding, its vertices stay split per
-    B-rep face: the normals come out smooth within a face and sharp across edges. ~3 ms; mtime keys the cache."""
+    """The pipeline's glb as a viewer needs it: src.pipeline.mesh exports it with normals but without a material,
+    so it would show plain white. Loaded without welding, its vertices stay split per B-rep face: the normals
+    stay smooth within a face and sharp across edges. ~3 ms; mtime keys the cache."""
     mesh = trimesh.load(glb_path, force="mesh", process=False)
     mesh.visual = trimesh.visual.TextureVisuals(material=PBRMaterial(  # matte grey: darker than the renders'
         baseColorFactor=[97, 102, 110, 255], metallicFactor=0.0, roughnessFactor=0.6))  # (0.70), brighter light
@@ -123,7 +140,7 @@ def three_d_toggle(key):
     and the 3D view spun next to an "off" toggle. Setting it through session_state syncs the browser too."""
     saved = f"{key}_on"
     st.session_state[key] = st.session_state.get(saved, False)
-    return st.toggle("3D view", key=key, on_change=lambda: st.session_state.update({saved: st.session_state[key]}))
+    return st.toggle(bi("3D 보기", "3D view"), key=key, on_change=lambda: st.session_state.update({saved: st.session_state[key]}))
 
 
 def render_views(paths, glb_path=None, key=None):
@@ -140,10 +157,10 @@ def render_views(paths, glb_path=None, key=None):
 def similar_controls(key):
     """Size filter and count for a similar-parts grid -> (limit, max_size_ratio)."""
     size_col, limit_col, _ = st.columns([1, 1, 3])
-    size = size_col.selectbox("Size", list(SIZE_FILTERS), key=f"{key}_size",
-                              help="Image similarity ignores scale: a 20 mm and a 200 mm bracket can look "
-                                   "identical. This keeps only parts of comparable size.")
-    limit = limit_col.selectbox("Show", (5, 10), index=1, key=f"{key}_limit")
+    size = size_col.selectbox(bi("크기", "Size"), list(SIZE_FILTERS), key=f"{key}_size",
+                              help="이미지 유사도는 크기를 무시합니다: 크기가 비슷한 부품만 남깁니다.  \n"
+                                   "Image similarity ignores scale: this keeps parts of comparable size.")
+    limit = limit_col.selectbox(bi("표시", "Show"), (5, 10), index=1, key=f"{key}_limit")
     return limit, SIZE_FILTERS[size]
 
 
@@ -154,7 +171,8 @@ def similar_grid(hits):
             with col:
                 part_tile(s["part_id"], s["part_no"], [
                     s["name"],
-                    f"similarity **{s['similarity']:.2f}** · size ×{s['size_ratio']:.2f}",
+                    f"유사도 **{s['similarity']:.2f}** :gray[:small[similarity]]",
+                    f"크기 ×{s['size_ratio']:.2f} :gray[:small[size]]",
                     f"{s['material']} {status_badge(s['status'])}",
                     results_badges(s["test_results"]),
                 ])

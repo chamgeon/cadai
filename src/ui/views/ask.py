@@ -27,6 +27,7 @@ from PIL import Image
 from src.config import RAW
 from src.qa import agent
 from src.ui import data, widgets
+from src.ui.widgets import bi, bi_lines
 
 PART_NO = re.compile(r"\b(?!TR-|ECO-)[A-Z]{2}-\d{5}\b")
 MAX_TILES = 10
@@ -79,7 +80,7 @@ def attach(name, content, user, convo):
     if ext in TEXT_TYPES:
         return ({"kind": "text", "name": name, "text": content.decode("utf-8", errors="replace")},
                 {"kind": "doc", "name": name, "bytes": len(content)})
-    return None, {"kind": "error", "text": f"{name}: this file type can't be read"}
+    return None, {"kind": "error", "text": f"{name}: " + bi("읽을 수 없는 파일 형식", "this file type can't be read")}
 
 
 def encode(image, fmt):
@@ -97,12 +98,13 @@ def attach_step(name, content, user, convo):
     if sha not in convo["files"]:
         work = Path(tempfile.mkdtemp(prefix="cadai-upload-"))
         (work / name).write_bytes(content)
-        with st.status(f"Reading {name}…") as status:
+        with st.status(f"{name} " + bi("읽는 중…", "reading…")) as status:
             res = data.process_upload(work / name, work / "parts")
-            status.update(label=f"Read {name} in {sum(res.get('seconds', {}).values()):.1f} s",
+            seconds = sum(res.get("seconds", {}).values())
+            status.update(label=f"{name} " + bi(f"{seconds:.1f}초", f"read in {seconds:.1f} s"),
                           state="complete" if res["ok"] else "error")
         if not res["ok"]:
-            return None, {"kind": "error", "text": f"Could not read {name}: {res['error']}"}
+            return None, {"kind": "error", "text": f"{name}: " + bi("읽기 실패", "could not read") + f" ({res['error']})"}
         shapes = []
         for p in res["parts"]:
             if p["status"] != "ok":
@@ -120,7 +122,8 @@ def attach_step(name, content, user, convo):
     found = convo["files"][sha]
     shown = {"kind": "step", "name": name, **found}
     if not found["shapes"]:
-        return None, shown | {"kind": "error", "text": f"{name}: no solid passed validation"}
+        return None, shown | {"kind": "error", "text": f"{name}: " + bi("검증을 통과한 솔리드 없음",
+                                                                         "no solid passed validation")}
     return {"kind": "step", "name": name, "shapes": [
         {"handle": s["handle"], "dims": s["dims"], "volume": s["volume"], "render": s["renders"][widgets.ISO]}
         for s in found["shapes"]]}, shown
@@ -137,8 +140,8 @@ def show_attachment(a):
         for shape in a["shapes"][:MAX_SHAPES_SHOWN]:
             show_shape(a["name"], shape)
         more = len(a["shapes"]) - MAX_SHAPES_SHOWN
-        st.caption(a["timing"] + (f" · {more} more solids not shown" if more > 0 else "")
-                   + (f" · skipped: {'; '.join(a['skipped'])}" if a["skipped"] else ""))
+        st.caption(a["timing"] + (" · " + bi(f"솔리드 {more}개 더 (생략)", f"{more} more solids not shown") if more > 0 else "")
+                   + (" · " + bi("제외", "skipped") + f": {'; '.join(a['skipped'])}" if a["skipped"] else ""))
 
 
 def show_shape(name, shape):
@@ -148,36 +151,39 @@ def show_shape(name, shape):
         left, right = st.columns([1, 4])
         left.image(shape["renders"][widgets.ISO], width="stretch")
         right.markdown(f"**{shape['handle']}** · {name} · {dims} mm · {shape['volume'] / 1000:,.1f} cm³")
-        right.caption("No part number, no PLM record: the parts below come from the shape alone.")
+        right.caption(bi_lines("부품번호·PLM 기록 없음: 아래 부품은 형상만으로 찾았습니다",
+                               "No part number, no PLM record: found by shape alone"))
         hits = shape["similar"]
         if hits and hits[0]["similarity"] >= SAME_PART:
-            right.success(f"Looks like an existing part: **{hits[0]['part_no']}** ({hits[0]['name']}, similarity "
-                          f"{hits[0]['similarity']:.2f}, size ×{hits[0]['size_ratio']:.2f}). Reuse it rather than "
-                          "release a new number?")
+            right.success(bi_lines(f"기존 부품으로 보입니다: **{hits[0]['part_no']}** ({hits[0]['name']}, 유사도 "
+                                   f"{hits[0]['similarity']:.2f}, 크기 ×{hits[0]['size_ratio']:.2f}). "
+                                   "새 번호를 받는 대신 재사용할까요?",
+                                   "Looks like an existing part: reuse it rather than release a new number?"))
         if hits:
             widgets.similar_grid(hits)
         else:
-            st.caption("No similar parts among the parts this user may see.")
-        with st.expander("All views"):
+            st.caption(bi("열람 가능한 부품 중 유사 부품 없음", "no similar parts among the parts this user may see"))
+        with st.expander(bi("모든 뷰", "All views")):
             widgets.render_views(shape["renders"], shape["glb"], key=f"view3d_{shape['handle']}")
 
 
 def describe(tool, args):
     """One line per tool call, in words an engineer reads."""
     if tool == "lookup_part":
-        return f"Looked up **{args['part_no']}**"
+        return f"**{args['part_no']}** " + bi("조회", "looked up")
     if tool == "similar_parts":
         ratio = args.get("max_size_ratio")
-        return f"Found parts shaped like **{args['part_no']}**" + (f", size within ×{ratio}" if ratio else "")
+        return (f"**{args['part_no']}** " + bi("와 비슷한 형상 검색", "parts shaped like it")
+                + (f" · {bi('크기', 'size')} ×{ratio}" if ratio else ""))
     if tool == "search_notes":
-        line = f"Searched notes for “{args['query']}”"
+        line = bi("노트 검색", "searched notes") + f" “{args['query']}”"
         if args.get("keywords"):
-            line += f" · keywords {', '.join(args['keywords'])}"
+            line += f" · {bi('키워드', 'keywords')} {', '.join(args['keywords'])}"
         filters = {k: v for k, v in args.items() if k not in ("query", "keywords", "limit") and v}
         return line + "".join(f" · {k}={v}" for k, v in filters.items())
     if tool == "query_parts":
         filters = {k: v for k, v in args.items() if k != "aggregate" and v not in (None, "any")}
-        return f"Queried the parts table ({args.get('aggregate', 'list')})" + "".join(
+        return bi("부품 테이블 조회", "queried the parts table") + f" ({args.get('aggregate', 'list')})" + "".join(
             f" · {k}={v}" for k, v in filters.items())
     return f"{tool}({args})"
 
@@ -196,15 +202,17 @@ def show_answer(out, user):
         return
     st.markdown(out["answer"])
     if out["unverified_ids"]:
-        st.warning(f"Not found in any record the tools returned: {', '.join(out['unverified_ids'])}. "
-                   "Check these before relying on them.")
+        ids = ", ".join(out["unverified_ids"])
+        st.warning(bi_lines(f"어떤 기록에도 없는 번호: {ids}. 사용 전에 확인하세요.",
+                            f"Not found in any record the tools returned: {ids}. Check them before relying on them."))
     cited = []
     for part_no in dict.fromkeys(PART_NO.findall(out["answer"])):  # first mention order, no repeats
         p = data.part(user, part_no)
         if p is not None:
             cited.append(p)
     if cited:
-        st.caption(f"Parts cited ({len(cited)})" + (f", first {MAX_TILES} shown" if len(cited) > MAX_TILES else ""))
+        st.caption(bi(f"인용된 부품 {len(cited)}개", f"parts cited ({len(cited)})")
+                   + (" · " + bi(f"처음 {MAX_TILES}개 표시", f"first {MAX_TILES} shown") if len(cited) > MAX_TILES else ""))
         cited = cited[:MAX_TILES]
         for row in range(0, len(cited), 5):
             for col, p in zip(st.columns(5), cited[row:row + 5]):
@@ -214,22 +222,24 @@ def show_answer(out, user):
                         f"{p['latest']['material']} {widgets.status_badge(p['latest']['status'])}",
                     ])
     u = out["usage"]
-    st.caption(f"{out['seconds']} s · {plural(out['rounds'], 'tool round')} · "
-               f"{plural(len(out['trace']), 'tool call')} · {u.get('output_tokens', 0):,} output tokens"
-               + (" · ids corrected by the post-check" if out["repaired"] else ""))
+    tokens, n_calls = u.get("output_tokens", 0), len(out["trace"])
+    st.caption(bi(f"{out['seconds']}초 · 도구 라운드 {out['rounds']} · 도구 호출 {n_calls} · 출력 토큰 {tokens:,}",
+                  f"{plural(out['rounds'], 'tool round')} · {plural(n_calls, 'tool call')} · output tokens")
+               + (" · " + bi("번호 사후 수정됨", "ids corrected by the post-check") if out["repaired"] else ""))
 
 
 def run(question, user, convo, attachments):
-    status = st.status("Thinking…", expanded=True)  # neutral: a greeting is answered without reading records
+    status = st.status(bi("생각 중…", "Thinking…"), expanded=True)  # neutral: a greeting is answered without reading records
     done = []
 
     def on_event(kind, info):
         if kind == "request" and info["kind"] == "id_repair":
-            status.update(label="Correcting ids the records don't contain…")
+            status.update(label=bi("기록에 없는 번호 수정 중…", "correcting ids the records don't contain…"))
         elif kind == "request" and done:
-            status.update(label=f"Claude is reading the results ({plural(len(done), 'tool call')} so far)…")
+            status.update(label=bi(f"결과 읽는 중 (도구 호출 {len(done)})…",
+                                   f"reading the results ({plural(len(done), 'tool call')} so far)…"))
         elif kind == "tool":
-            status.update(label=f"Running {info['tool']}…")
+            status.update(label=f"{info['tool']} " + bi("실행 중…", "running…"))
         elif kind == "result":
             done.append(info)
             status.markdown(f"{describe(info['tool'], info['input'])}"
@@ -240,10 +250,12 @@ def run(question, user, convo, attachments):
                                           on_event=on_event, history=convo["messages"], seen=convo["seen"],
                                           attachments=attachments, shapes=convo["shapes"]))
     except anthropic.APIError as e:
-        status.update(label="Failed", state="error")
-        return {"error": f"The model API failed: {type(e).__name__}: {e}"}
-    status.update(label=f"Answered in {out['seconds']} s"
-                        + (f" · {plural(len(out['trace']), 'tool call')}" if out["trace"] else ""),
+        status.update(label=bi("실패", "failed"), state="error")
+        return {"error": bi("모델 API 실패", "the model API failed") + f": {type(e).__name__}: {e}"}
+    n_calls = len(out["trace"])
+    status.update(label=bi(f"{out['seconds']}초 만에 답변" + (f" · 도구 호출 {n_calls}" if n_calls else ""),
+                           f"answered in {out['seconds']} s"
+                           + (f" · {plural(n_calls, 'tool call')}" if n_calls else "")),
                   state="complete", expanded=False)
     convo["messages"], convo["seen"] = out.pop("messages"), out.pop("seen")
     return out
@@ -255,11 +267,11 @@ if prefill:  # a handoff or an example starts a new topic
     new_chat()
 chat = st.session_state.setdefault("chat", [])
 convo = st.session_state.setdefault("convo", {"messages": [], "seen": set(), "shapes": {}, "files": {}})
-left, right = st.columns([5, 1], vertical_alignment="center")
-left.caption("Answers come only from records this user may see, with every fact cited. Follow-up questions can "
-             "refer to earlier answers. Attach a STEP file to find parts shaped like it, or an image or document.")
+left, right = st.columns([4, 1], vertical_alignment="center")
+left.caption(bi_lines("열람 가능한 기록으로만 답하고 모든 사실에 출처를 답니다. 후속 질문, STEP·이미지·문서 첨부 가능.",
+                      "Answers only from records you may see, every fact cited. Follow-ups and attachments work."))
 if chat:
-    right.button("New chat", icon=":material/add_comment:", on_click=new_chat, width="stretch")
+    right.button(bi("새 대화", "New chat"), icon=":material/add_comment:", on_click=new_chat, width="stretch")
 
 for msg in chat:
     with st.chat_message(msg["role"]):
@@ -269,13 +281,14 @@ for msg in chat:
             st.markdown(msg["content"])
         else:
             if msg["out"].get("trace"):
-                with st.expander(plural(len(msg["out"]["trace"]), "tool call")):
+                n_calls = len(msg["out"]["trace"])
+                with st.expander(bi(f"도구 호출 {n_calls}", plural(n_calls, "tool call"))):
                     for t in msg["out"]["trace"]:
                         st.markdown(f"{describe(t['tool'], t['input'])} · {took(t['seconds'])}")
             show_answer(msg["out"], user)
 
-typed = st.chat_input("Ask about parts, tests and changes, or attach a file…",  # always drawn, or it vanishes
-                      accept_file="multiple", max_upload_size=30,                # during a prefill
+typed = st.chat_input("Ask about parts, tests and changes, or attach a file",  # always drawn, or it vanishes
+                      accept_file="multiple", max_upload_size=30,                  # during a prefill
                       file_type=[*STEP_TYPES, *IMAGE_TYPES, "pdf", *TEXT_TYPES])
 if prefill:
     question, files = prefill["text"], prefill["files"]
@@ -285,12 +298,12 @@ else:
     question, files = "", []
 
 if not chat and not question and not files:  # not while answering: a click would stop the run and lose the answer
-    st.caption("Try:")
+    st.caption(bi("예시", "Try"))
     for col, (example, example_files) in zip(st.columns(2), EXAMPLES[:2]):
         col.button(example, on_click=ask, args=(example, example_files), width="stretch")
     for col, (example, example_files) in zip(st.columns(2), EXAMPLES[2:]):
         col.button(example, on_click=ask, args=(example, example_files), width="stretch")
-    st.button(f"Attach {SAMPLE.name} and ask about it", icon=":material/attach_file:",
+    st.button(bi(f"{SAMPLE.name} 첨부해서 질문하기", f"attach {SAMPLE.name} and ask"), icon=":material/attach_file:",
               on_click=ask, args=(SAMPLE_QUESTION, (SAMPLE,)), width="stretch")
 
 if question or files:
