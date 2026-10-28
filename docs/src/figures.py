@@ -1,4 +1,4 @@
-"""Diagrams for docs/pipeline.pdf, docs/query-flow.pdf and docs/step8-evaluation-report.pdf (inches, 300 dpi PNG).
+"""Diagrams for the PDFs in docs/ (drawn in inches, saved as 300 dpi PNG).
 
 Used by build_docs.py; draw(out_dir, names) writes the named figures."""
 
@@ -317,8 +317,115 @@ def eval_overview():
 
 
 
+# ------------------------------------------------------------------ requirements: production architecture
+def production():
+    fig, ax = canvas(7.3, 5.35)
+    ax.set_ylim(0.25, 5.6)  # drawn on 0..5.6; nothing below the demo note
+
+    def tag(x, y, ids):
+        ax.text(x, y, ids, fontsize=6.0, color=RED[1], weight="bold", va="top", ha="right")
+
+    # query side
+    ax.text(0.05, 5.55, "QUERY SIDE", fontsize=6.4, color="#7d8796", weight="bold", va="top")
+    box(ax, 0.05, 4.45, 1.25, 0.95, "Engineers", "≈1,000 active\n~100 sessions at peak\n3–6 asks in flight", GRAY,
+        bsize=6.1)
+    box(ax, 1.5, 4.45, 1.2, 0.95, "SSO + load\nbalancer", "\n\nsticky sessions\n(Streamlit websockets)", GRAY,
+        bsize=6.1)
+    tag(2.68, 4.53, "S2 P5")
+    box(ax, 2.9, 4.45, 1.35, 0.95, "App replicas", "UI only, stateless,\n< 2 GB each; no\nmodels inside", BLUE,
+        bsize=6.1)
+    tag(4.23, 4.53, "O1 O2")
+    box(ax, 4.45, 4.45, 1.5, 0.95, "Search + agent API", "tools enforce PLM\npermissions; audit\nlog of every answer",
+        PURPLE, bsize=6.1)
+    tag(5.93, 4.53, "S1 S4 S5")
+    box(ax, 6.15, 4.45, 1.1, 0.95, "LLM gateway", "private endpoint,\nquotas, rate limit,\ncost per user", PURPLE,
+        bsize=6.1)
+    tag(7.23, 4.53, "S3 O4")
+    for x1, x2 in ((1.3, 1.5), (2.7, 2.9), (4.25, 4.45), (5.95, 6.15)):
+        arrow(ax, x1, 4.92, x2, 4.92)
+
+    # shared services and stores
+    ax.text(0.05, 4.2, "SHARED SERVICES AND STORES  (read by the query side, written by ingest)", fontsize=6.4,
+            color="#7d8796", weight="bold", va="top")
+    box(ax, 0.05, 3.05, 1.6, 0.95, "Embedding service", "GPU: DINOv2 (views),\nBGE-M3 (text), batched;\n"
+        "uploads and ingest", BLUE, bsize=6.1)
+    tag(1.63, 3.13, "P3 O2")
+    box(ax, 1.85, 3.05, 1.75, 0.95, "Vector DB", "parts: 2M × 6 × 768\n≈ 37 GB raw, ~9 GB int8\n"
+        "docs: notes, cards", GRAY, bsize=6.1)
+    tag(3.58, 3.13, "P1 P2")
+    box(ax, 3.8, 3.05, 1.75, 0.95, "Postgres", "registry, jobs, PLM\nmirror, permissions,\naudit log", GRAY,
+        bsize=6.1)
+    tag(5.53, 3.13, "S1 S4")
+    box(ax, 5.75, 3.05, 1.5, 0.95, "Object storage", "meshes, renders;\n70% alert, 3-2-1\nbackups", GRAY, bsize=6.1)
+    tag(7.23, 3.13, "O3")
+    arrow(ax, 5.2, 4.45, 5.2, 4.0, "reads", color="#7d8796", dash=True, loff=(0.06, -0.09), ha="left", lsize=5.8)
+
+    # ingest side
+    ax.text(0.05, 2.8, "INGEST SIDE  (workers embed through the shared service, write every store)", fontsize=6.4,
+            color="#7d8796", weight="bold", va="top")
+    box(ax, 0.05, 1.55, 1.3, 1.05, "PLM + CAD vault", "CATIA parts and\nassemblies; release,\nlifecycle, "
+        "permissions", GRAY, bsize=6.1)
+    box(ax, 1.55, 1.55, 1.25, 1.05, "Change feed", "release events +\nnightly reconcile;\nobsolete → removed", AMBER,
+        bsize=6.1)
+    tag(2.78, 1.63, "I1 I2 I5")
+    box(ax, 3.0, 1.55, 1.3, 1.05, "Translation", "CATIA → STEP AP242,\nassemblies resolved;\nlicensed seats",
+        AMBER, bsize=6.1)
+    tag(4.28, 1.63, "F1 F5")
+    box(ax, 4.5, 1.55, 1.2, 1.05, "Queue", "jobs by revision;\nDLQ + alert;\nbackfill lane", AMBER, bsize=6.1)
+    tag(5.68, 1.63, "I6 I7")
+    box(ax, 5.9, 1.55, 1.35, 1.05, "CPU workers", "extract, mesh,\nrender (scaled out);\nembed via service",
+        AMBER, bsize=6.1)
+    tag(7.23, 1.63, "I3 I4")
+    for x1, x2 in ((1.35, 1.55), (2.8, 3.0), (4.3, 4.5), (5.7, 5.9)):
+        arrow(ax, x1, 2.07, x2, 2.07)
+    arrow(ax, 6.6, 2.6, 6.6, 3.05, "writes", color="#7d8796", dash=True, loff=(0.06, -0.09), ha="left", lsize=5.8)
+    ax.text(0.05, 1.32, "permissions and PLM records are mirrored into Postgres, so tools filter before retrieval",
+            fontsize=6.2, color=SUB, style="italic", va="top")
+
+    # what the demo used instead
+    ax.text(0.05, 1.0, "In the demo:", fontsize=7.0, weight="bold", color=INK, va="top")
+    ax.text(0.05, 0.8, "one laptop · folder polling instead of the change feed · SQLite instead of Postgres · local "
+            "folders instead of object storage · models inside the app (4.3 GB)\nuser picked in a sidebar instead of SSO "
+            "· public Claude API instead of a private endpoint · fixed program table instead of PLM permissions",
+            fontsize=6.2, color=SUB, va="top", linespacing=1.4)
+    ax.text(7.25, 1.0, "red: requirement ids (table below)", fontsize=6.0, color=RED[1], ha="right", va="top")
+    save(fig, "production")
+
+
+# ------------------------------------------------------------------ requirements: what each format keeps
+def catia_loss():
+    fig, ax = canvas(7.3, 2.75)
+    ax.set_ylim(0.45, 3.2)  # drawn on 0..3.2; nothing below the bracket note
+    stages = [  # title, format note, kept, lost, colors
+        ("CATIA V5", "CATPart · CATProduct", "feature tree, parameters,\nconstraints, design intent;\n"
+         "PMI; links to child parts;\nPLM revision + permissions", "", BLUE),
+        ("STEP AP242", "licensed translator", "exact B-rep geometry;\nPMI (if exported);\nassembly structure",
+         "feature tree, parameters,\nconstraints, design intent", AMBER),
+        ("Mesh", "size-scaled tolerance", "triangles: medium\n0.06% volume error;\ncap 500k per part",
+         "exact surfaces,\nface identities", AMBER),
+        ("Renders + vectors", "6 views → 6 × 768", "shape, seen from\n6 fixed directions", "size (scaled to fit),\n"
+         "hidden faces, material", AMBER),
+    ]
+    for i, (title, note, kept, lost, col) in enumerate(stages):
+        x = 0.05 + i * 1.85
+        box(ax, x, 1.0, 1.6, 2.15, title, "", col, tsize=8.2)
+        ax.text(x + 0.8, 2.86, note, ha="center", va="top", fontsize=6.2, color=SUB, style="italic")
+        ax.text(x + 0.1, 2.62, "keeps", fontsize=6.2, color=GREEN[1], weight="bold", va="top")
+        ax.text(x + 0.1, 2.46, kept, fontsize=6.2, color=SUB, va="top", linespacing=1.3)
+        if lost:
+            ax.text(x + 0.1, 1.72, "loses", fontsize=6.2, color=RED[1], weight="bold", va="top")
+            ax.text(x + 0.1, 1.56, lost, fontsize=6.2, color=SUB, va="top", linespacing=1.3)
+        if i:
+            arrow(ax, x - 0.25, 2.07, x, 2.07)
+    ax.text(0.05, 0.85, "My bracket (FreeCAD, parametric): exported to STEP AP242 and read back, the feature tree and its "
+            "parameters were gone,\nonly the geometry was left, and it was exact: volume 13,967.3 mm³, as calculated by "
+            "hand. So the pipeline keeps PLM metadata\nnext to the STEP: design intent is not in the file the AI reads.",
+            fontsize=6.4, color=INK, va="top", linespacing=1.4)
+    save(fig, "catia_loss")
+
+
 FIGURES = {"pipeline": (pipeline_overview, job_states), "query": (query_overview, hybrid_search, step_search),
-           "eval": (eval_overview,)}
+           "eval": (eval_overview,), "requirements": (production, catia_loss)}
 
 
 def draw(out_dir, doc):

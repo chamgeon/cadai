@@ -177,15 +177,18 @@ You will build a mini **"similar-part search + Q&A"** system:
   - Millions of parts, backfill strategy
   - Security: on-prem models, program-level access control, audit
   - Storage thresholds (~70% alert) and 3-2-1 backups
-- Prepare a 3-minute walkthrough and a 10-minute deep dive.
 
-**Done when:** you can explain the system out loud without notes.
+**Done when:** the mini and scaled-up architecture, the production requirements and the CATIA notes are written down (`docs/step9-requirements.pdf`).
 
-### Step 10: Mock Interview + Buffer
+### Step 10: Learn, Rehearse, Mock Interview + Buffer
 **Do**
+- Learn the system section by section until you can explain each part and its numbers.
+- Prepare a 3-minute walkthrough and a 10-minute deep dive.
 - Practice out loud (record yourself, or ask a friend or an AI to interview you).
-- Rehearse the demo; prepare screenshots in case live demo fails.
+- Run the 2-minute demo end to end (search → similar parts → Q&A); prepare screenshots or a recording in case the live demo fails.
 - Use remaining time to fix whatever slipped.
+
+**Done when:** you can explain the system out loud without notes, and the demo runs in 2 minutes.
 
 ---
 

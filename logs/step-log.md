@@ -112,7 +112,7 @@ One short entry per plan step. Paths are current (`src/pipeline/` steps 1–5, `
 
 **Decisions:** memory first on 8 GB (BGE-M3 fp16 queries, 3D off by default); an upload is a question, not an ingest; all model calls on one tool thread; images to Claude only (no photo → render search).
 
-**Open:** full 2-minute demo run moved to after step 8 (evaluation); answer streaming; a real photo / large PDF / Word files untested; tile "similarity" wraps in narrow tiles.
+**Open:** full 2-minute demo run → step 10; answer streaming; a real photo / large PDF / Word files untested; tile "similarity" wraps in narrow tiles.
 
 ## Step 8 — Evaluation (2026-10-28)
 
@@ -133,3 +133,16 @@ One short entry per plan step. Paths are current (`src/pipeline/` steps 1–5, `
 **Learned:** the corpus caps search (no part families); grader repeat rate 84–91% → gaps < 0.07 are noise; an LLM judge needs the agent's evidence and one narrow question.
 
 **Open:** search is limited by the corpus (unrelated shapes, no part families): known variants or production PLM data would fix it, out of the demo's scope (time, compute, disk, cost). Blank final answer and the missing aggregate tool fixed after the report: see step 6.
+
+## Step 9 — Story (2026-10-28)
+
+**Built:** `docs/step9-requirements.pdf`: production architecture tagged with requirement ids; 32 requirements (functional, performance, freshness, quality, security, operations), each with demo status and production action; risks the numbers predict; unknowns for a pilot; CATIA at scale (what CATIA → STEP AP242 → mesh → vectors keeps and loses, 8 CATIA facts → what the demo showed → what the pipeline must do).
+
+**Numbers:** assumed 1,000 users, ~100 sessions at peak, 4k asks/day (3–6 in flight), 2M revisions. A question ≈ 6.5k input tokens (90% cached) + 570 output → ~$2k/month. Vectors 37 GB raw, ~9 GB int8 → one node, no sharding.
+
+**Decisions:** targets are estimates, risks are derived from measured numbers, and what only real use shows (query mix, permission model, translator throughput, attacks) goes to a pilot instead of a guess. Caches keyed by permission set, never shared across users.
+
+**Learned:** the ABC files are AP214 ("automotive design"), the bracket AP242; 9 of 10 dead files were surfaces only, which is what class-A body panels look like.
+
+**Changed 2026-10-28:** walkthroughs and "explain without notes" moved to step 10 (plan updated); step 9 is done.
+

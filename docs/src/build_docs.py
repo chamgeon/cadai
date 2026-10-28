@@ -1,7 +1,6 @@
-"""Build docs/pipeline.pdf, docs/query-flow.pdf and docs/step8-evaluation-report.pdf (ReportLab), figures from
-figures.py.
+"""Build the PDFs in docs/ (ReportLab), figures from figures.py.
 
-    python docs/src/build_docs.py [pipeline] [query] [eval]     (all when none is named)
+    python docs/src/build_docs.py [pipeline] [query] [eval] [requirements]     (all when none is named)
 
 The figures are drawn into a temporary folder; only the PDFs are kept.
 """
@@ -329,8 +328,119 @@ def eval_doc():
     build(OUT / "step8-evaluation-report.pdf", "Step 8 · Evaluation", s)
 
 
+# ======================================================================= step9-requirements.pdf
+def requirements_doc():
+    s = [
+        p("Step 9 · Production Requirements", "title"),
+        p("Assumed: 1,000 active users (~400 a day), ~100 sessions at peak · 4,000 asks a day, 3–6 in flight "
+          "(designed for 20) · 12,000 searches a day (designed for 10/s) · 2M part revisions, 2–5k releases a day "
+          "· 2026-10-28", "sub"),
+        figure("production", "Figure 1. The system at production scale; red ids are the requirements below.",
+               4.3 * inch),
+        p("Requirements", "h1"),
+        table([
+            ["Id", "The system shall … (target)", "Demo", "Production"],
+            ["F1", "find shape-similar parts for a part number or an uploaded CAD file", "yes (STEP)",
+             "CATIA via the PLM translation service"],
+            ["F2", "search records and notes in Korean and English", "yes", "same design, enterprise vector DB"],
+            ["F3", "cite every fact in an answer (100%)", "yes", "links into PLM"],
+            ["F4", "tell revisions apart: open vs fixed later", "yes", "revision model from PLM"],
+            ["F5", "handle assemblies (CATProduct, thousands of children)", "no", "resolve references, index structure"],
+            ["F6", "aggregate across many records (fix history, counts)", "yes", "structured reason codes"],
+            ["P1", "text search p95 < 1 s at 2M parts", "partly: 0.48 s at 1.6k", "load test at full size"],
+            ["P2", "shape search p95 < 1 s at 2M parts", "partly: 0.04 s at 1.6k", "int8 / mean vector, MaxSim re-rank"],
+            ["P3", "upload → similar parts p95 < 10 s", "partly: 1.1 s, max 5.6", "GPU service; assemblies async"],
+            ["P4", "Ask: progress < 2 s, answer p95 < 30 s", "partly: 7.5 s median", "stream the answer"],
+            ["P5", "20 asks in flight, 10 searches/s, no degradation", "no", "load test, replicas, rate limits"],
+            ["I1", "a release is searchable < 1 h (aim 15 min)", "partly: 16 s, folder polling", "PLM change feed"],
+            ["I2", "no release missed (0 a month)", "partly", "nightly reconciliation with PLM"],
+            ["I3", "ingest 5k revisions a day with margin", "partly: ~95k/day on 1 worker", "CPU + GPU workers"],
+            ["I4", "backfill 2M parts < 2 weeks", "no: ~21 days on 1 worker", "~10 workers + translator seats"],
+            ["I5", "obsolete or deleted parts leave the index < 24 h", "no", "lifecycle events"],
+            ["I6", "conversion ≥ 98%, every failure logged with an owner", "yes: 98.0%, DLQ", "alerts, owners"],
+            ["I7", "a model change re-embeds without downtime", "yes: versioned backfill", "side-by-side index, switch"],
+            ["Q1", "search usefulness measured on part families", "partly: P@5 0.35, no families", "PLM families, clicks"],
+            ["Q2", "Q&amp;A ≥ 95% on a gold set, 0 invented ids", "yes: 97–98%, 0", "gold set from real questions"],
+            ["Q3", "every change regression-tested", "partly: by hand", "automatic, with a cost cap"],
+            ["Q4", "honest when it can't answer (0 blank answers)", "yes", "keep in the gold set"],
+            ["S1", "PLM permissions enforced before retrieval (0 leaks)", "yes: 0 in 204, programs only",
+             "real permissions, synced"],
+            ["S2", "users log in with company identity", "no: sidebar", "SSO, groups from the IdP"],
+            ["S3", "CAD/PLM data stays within approved bounds", "partly: public LLM API", "private endpoint or on-prem"],
+            ["S4", "every question and answer auditable", "partly: traces not kept", "audit log, retention"],
+            ["S5", "text in records or files can't steer the agent", "partly", "red team; tools stay read-only"],
+            ["O1", "99.5% available in business hours", "no: one laptop", "replicas, health checks"],
+            ["O2", "app process < 2 GB", "no: 4.3 GB", "models as a GPU service"],
+            ["O3", "storage alert at 70%, 3-2-1 backups", "partly: 1.49× STEP measured", "drop .stl (→ 0.83×)"],
+            ["O4", "LLM cost known and bounded", "partly: $0.023/question", "quotas, dashboard (~$2k/month)"],
+            ["O5", "latency, errors, ingest lag, cost observable", "partly: offline", "metrics, tracing, alerts"],
+        ], [0.05, 0.43, 0.24, 0.28]),
+        p("Risks the numbers predict", "h1"),
+        table([
+            ["Topic", "What the numbers say", "Design"],
+            ["Load balancing", "Streamlit keeps each session on one websocket; a replica with the models in it is "
+             "4.3 GB", "sticky sessions; app replicas without models; one shared GPU service"],
+            ["LLM rate limits", "a question: ~6.5k input tokens (90% cached), 570 output, 2 requests; hard ones 3×. "
+             "At 1 ask/s: ~120 requests, ~400k input and ~35k output tokens a minute",
+             "check the endpoint's limits and whether cached reads count; queue with backoff; per-user quota"],
+            ["Cost", "$0.023 a question → ~$90 a day, ~$2k a month at 4,000 asks a day",
+             "quota per user; alert on spikes; prompt cache kept warm"],
+            ["Sharding", "2M × 6 × 768 floats ≈ 37 GB; int8 ≈ 9 GB; mean vector only ≈ 6 GB",
+             "one node fits: replicate for availability, shard only near 10× the corpus"],
+            ["Caching", "the prompt cache already serves ~90% of input tokens",
+             "cache searches and answers per permission set, never across users (a shared cache leaks); "
+             "upload embeddings by sha256"],
+            ["Misuse", "a user may pull a whole program through many questions; notes and supplier files can "
+             "carry injected text", "quotas and anomaly alerts on the audit log; read-only tools; ids checked"],
+        ], [0.16, 0.44, 0.4]),
+        p("Unknowns to find out, not guess", "h1"),
+        table([
+            ["Unknown", "How to find out"],
+            ["the real query mix and the shape of the peak", "pilot with 30–50 engineers; logs"],
+            ["search quality on real part families", "label families from PLM; click feedback"],
+            ["translation speed and failures on CATIA assemblies", "run the translator on one program's parts"],
+            ["latency and limits on the approved LLM endpoint", "load test with recorded questions"],
+            ["the permission model (export control, supplier-specific)", "workshop with PLM admins"],
+            ["how it can be attacked", "red team before the pilot"],
+        ], [0.5, 0.5]),
+
+        PageBreak(),
+        p("CATIA at scale", "h1"),
+        p("My understanding is that vehicle design runs mainly on CATIA V5 (anonymous mentor answers, 2024; to "
+          "confirm). The demo starts from STEP; this is what changes when the source is CATIA in a PLM vault.", "sub"),
+        figure("catia_loss", "Figure 2. What each format keeps and loses on the way to a search vector.", 2.75 * inch),
+        table([
+            ["CATIA fact", "What the demo showed", "What the pipeline must do"],
+            ["A CATProduct references many CATParts by link; a child can be missing",
+             "ABC files hold several solids; 65% were copies of a solid in the same file",
+             "resolve references; index each unique CATPart once with its instance count; a missing child is "
+             "logged and the assembly kept as partial, not dead (F5)"],
+            ["Batch translation needs licensed translators; seats limit throughput",
+             "the pipeline itself: 0.91 s per part, 1 worker",
+             "size translator seats for the 2M-part backfill; translation is the likely bottleneck: measure it "
+             "on one program first (I4)"],
+            ["Body panels are class-A surfaces, not solids",
+             "9 of the 10 dead files were 'surfaces only'",
+             "accept surface bodies: skip the volume gate, render the surfaces, mark them as surface parts"],
+            ["Parts range from fasteners to body sides",
+             "0.1 mm – 9.7 m; an M3 thread reached 331k triangles",
+             "keep the size-scaled tolerance and the triangle cap; separate detail levels for viewing and ML"],
+            ["STEP comes as AP214 or AP242",
+             "ABC files: AP214 (501); my bracket: AP242; schema logged per file",
+             "export AP242 to keep PMI (dimensions, tolerances) and assembly structure"],
+            ["Design intent lives in the feature tree", "my bracket: tree gone in STEP, geometry exact",
+             "keep PLM metadata beside the geometry; never infer intent from STEP"],
+            ["Revisions live in PLM, not in files", "identity = file + sha256",
+             "identity = item id + revision; sha256 only to skip unchanged work; ingest released revisions"],
+            ["CGR / 3DXML / JT are lightweight tessellations", "coarse .glb for the 3D viewer",
+             "fine for viewing; similarity needs exact geometry from STEP, tessellated the same way for every part"],
+        ], [0.3, 0.3, 0.4]),
+    ]
+    build(OUT / "step9-requirements.pdf", "Step 9 · Production Requirements", s)
+
+
 DOCS = {"pipeline": (pipeline_doc, "pipeline.pdf"), "query": (query_doc, "query-flow.pdf"),
-        "eval": (eval_doc, "step8-evaluation-report.pdf")}
+        "eval": (eval_doc, "step8-evaluation-report.pdf"), "requirements": (requirements_doc, "step9-requirements.pdf")}
 
 if __name__ == "__main__":
     for name in sys.argv[1:] or list(DOCS):
